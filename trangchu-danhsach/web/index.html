@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodOrder – Đặt món ngon mỗi ngày</title>
+    <meta name="description" content="FoodOrder – Đặt món ăn trực tuyến nhanh chóng. Hàng trăm món ngon từ các nhà hàng uy tín, giao hàng tận nơi.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+    <a class="navbar-brand" href="index.html">
+        <div class="logo-icon">🍜</div>
+        FoodOrder
+    </a>
+    <ul class="navbar-nav">
+        <li><a href="index.html" class="active" id="nav-home">Trang chủ</a></li>
+        <li><a href="menu.html" id="nav-menu">Thực đơn</a></li>
+        <li><a href="#about" id="nav-about">Giới thiệu</a></li>
+        <li><a href="#contact" id="nav-contact">Liên hệ</a></li>
+    </ul>
+    <div class="navbar-actions">
+        <button class="btn btn-ghost" id="btn-search-toggle" onclick="toggleSearchBar()" title="Tìm kiếm">🔍</button>
+        <a href="menu.html" class="btn btn-primary" id="btn-order">🛒 Đặt món</a>
+    </div>
+</nav>
+
+<!-- Quick Search Bar -->
+<div class="quick-search-bar" id="quick-search-bar">
+    <div class="quick-search-inner">
+        <input type="text" id="quick-search-input" placeholder="Tìm món ăn bạn muốn..." autocomplete="off">
+        <button class="btn btn-primary" id="btn-quick-search" onclick="doQuickSearch()">Tìm</button>
+        <button class="btn btn-ghost" id="btn-close-search" onclick="toggleSearchBar()">✕</button>
+    </div>
+</div>
+
+
+<!-- ===== HERO SECTION ===== -->
+<section class="hero" id="hero">
+    <div class="hero-bg">
+        <div class="hero-circle c1"></div>
+        <div class="hero-circle c2"></div>
+        <div class="hero-circle c3"></div>
+    </div>
+
+    <div class="hero-content">
+        <div class="hero-text">
+            <div class="hero-tag">🔥 Giao hàng nhanh trong 30 phút</div>
+            <h1 class="hero-title">
+                Món ngon <span class="text-gradient">tươi ngon</span><br>
+                giao tận tay bạn
+            </h1>
+            <p class="hero-desc">
+                Hàng trăm lựa chọn từ các nhà hàng uy tín. Đặt món dễ dàng, giao nhanh tận nơi, thưởng thức trọn vẹn.
+            </p>
+
+            <div class="hero-search" id="hero-search">
+                <div class="hero-search-box">
+                    <span class="search-icon">🔍</span>
+                    <input
+                        type="text"
+                        id="hero-search-input"
+                        placeholder="Tìm món ăn yêu thích..."
+                        onkeyup="handleHeroSearch(event)"
+                        autocomplete="off">
+                    <button class="btn btn-primary" id="btn-hero-search" onclick="doHeroSearch()">Tìm kiếm</button>
+                </div>
+                <div class="hero-suggestions" id="hero-suggestions"></div>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-num" id="stat-foods">24+</span>
+                    <span class="stat-label">Món ăn</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">6</span>
+                    <span class="stat-label">Danh mục</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">30'</span>
+                    <span class="stat-label">Giao hàng</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual" id="hero-visual">
+            <div class="hero-img-wrap">
+                <div class="hero-img-ring"></div>
+                <div class="hero-img-main" id="hero-img-main">
+                    <span style="font-size:6rem;">🍜</span>
+                </div>
+                <!-- Floating cards -->
+                <div class="float-card fc1">
+                    <span>⭐</span> Đánh giá 4.9/5
+                </div>
+                <div class="float-card fc2">
+                    <span>🚀</span> Giao siêu tốc
+                </div>
+                <div class="float-card fc3">
+                    <span>🎁</span> Ưu đãi mới
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-scroll">
+        <span>Cuộn xuống</span>
+        <div class="scroll-arrow">↓</div>
+    </div>
+</section>
+
+
+<!-- ===== CATEGORY SECTION ===== -->
+<section class="section" id="categories">
+    <div class="section-header">
+        <div class="section-tag">🍽️ Danh mục</div>
+        <h2 class="section-title">Khám phá theo loại món</h2>
+        <p class="section-desc">Tìm món ăn yêu thích từ danh mục phong phú của chúng tôi</p>
+    </div>
+
+    <div class="category-grid" id="category-grid">
+        <!-- Skeleton loading -->
+        <div class="cat-card skeleton-card" id="cat-skeleton-1"></div>
+        <div class="cat-card skeleton-card" id="cat-skeleton-2"></div>
+        <div class="cat-card skeleton-card" id="cat-skeleton-3"></div>
+        <div class="cat-card skeleton-card" id="cat-skeleton-4"></div>
+        <div class="cat-card skeleton-card" id="cat-skeleton-5"></div>
+        <div class="cat-card skeleton-card" id="cat-skeleton-6"></div>
+    </div>
+</section>
+
+
+<!-- ===== FEATURED FOODS ===== -->
+<section class="section section-alt" id="featured">
+    <div class="section-header">
+        <div class="section-tag">⭐ Nổi bật</div>
+        <h2 class="section-title">Món ăn được yêu thích nhất</h2>
+        <p class="section-desc">Được đánh giá cao nhất từ hàng ngàn đơn hàng mỗi ngày</p>
+    </div>
+
+    <div class="food-grid" id="featured-grid">
+        <!-- JS render -->
+    </div>
+
+    <div class="section-cta">
+        <a href="menu.html" class="btn btn-outline" id="btn-view-all">Xem tất cả món ăn →</a>
+    </div>
+</section>
+
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section" id="how-it-works">
+    <div class="section-header">
+        <div class="section-tag">📖 Cách đặt món</div>
+        <h2 class="section-title">Chỉ 3 bước đơn giản</h2>
+    </div>
+    <div class="steps-grid">
+        <div class="step-card" id="step-1">
+            <div class="step-icon">🔍</div>
+            <div class="step-num">01</div>
+            <h3>Tìm & chọn món</h3>
+            <p>Duyệt thực đơn phong phú, tìm kiếm theo tên hoặc lọc theo danh mục yêu thích.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-card" id="step-2">
+            <div class="step-icon">🛒</div>
+            <div class="step-num">02</div>
+            <h3>Thêm vào giỏ</h3>
+            <p>Chọn số lượng, áp dụng mã giảm giá và điền thông tin nhận hàng.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-card" id="step-3">
+            <div class="step-icon">🚀</div>
+            <div class="step-num">03</div>
+            <h3>Nhận ngay tại nhà</h3>
+            <p>Xác nhận đơn, thanh toán tiện lợi và chờ món ngon giao đến tận nơi.</p>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===== PROMO BANNER ===== -->
+<section class="promo-banner" id="promo">
+    <div class="promo-inner">
+        <div class="promo-text">
+            <div class="promo-tag">🎉 Ưu đãi đặc biệt</div>
+            <h2>Giảm ngay 20% cho đơn đầu tiên!</h2>
+            <p>Nhập mã <strong>NEWUSER</strong> khi thanh toán. Áp dụng cho mọi đơn hàng không giới hạn giá trị.</p>
+            <div class="promo-code" id="promo-code-display">
+                <span>NEWUSER</span>
+                <button onclick="copyCode()" id="btn-copy-code">📋 Copy</button>
+            </div>
+        </div>
+        <div class="promo-visual">
+            <span style="font-size:5rem;">🎁</span>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer" id="contact">
+    <div class="footer-top">
+        <div>
+            <div class="footer-brand">
+                <div class="logo-icon" style="width:32px;height:32px;font-size:1rem;">🍜</div>
+                FoodOrder
+            </div>
+            <p>Nền tảng đặt món ăn trực tuyến uy tín, nhanh chóng và tiện lợi. Kết nối thực khách với hàng trăm nhà hàng chất lượng.</p>
+        </div>
+        <div>
+            <h4>Liên kết nhanh</h4>
+            <ul>
+                <li><a href="index.html">Trang chủ</a></li>
+                <li><a href="menu.html">Thực đơn</a></li>
+                <li><a href="#about">Giới thiệu</a></li>
+                <li><a href="#contact">Liên hệ</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Liên hệ</h4>
+            <ul>
+                <li>📍 123 Đường Ẩm Thực, TP.HCM</li>
+                <li>📞 1800 1234</li>
+                <li>✉️ hello@foodorder.vn</li>
+                <li>🕗 7:00 – 22:00 hàng ngày</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>© 2025 FoodOrder – BTL Lập Trình Web. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="js/index.js?v=2"></script>
+</body>
+</html>

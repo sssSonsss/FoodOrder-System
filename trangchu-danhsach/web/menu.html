@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thực đơn – FoodOrder</title>
+    <meta name="description"
+        content="Xem toàn bộ thực đơn món ăn. Tìm kiếm, lọc theo danh mục và sắp xếp theo giá, đánh giá.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+</head>
+
+<body>
+
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar" id="navbar">
+        <a class="navbar-brand" href="index.html">
+            <div class="logo-icon">🍜</div>
+            FoodOrder
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" id="nav-home">Trang chủ</a></li>
+            <li><a href="menu.html" class="active" id="nav-menu">Thực đơn</a></li>
+            <li><a href="index.html#about" id="nav-about">Giới thiệu</a></li>
+            <li><a href="index.html#contact" id="nav-contact">Liên hệ</a></li>
+        </ul>
+        <div class="navbar-actions">
+            <a href="index.html" class="btn btn-ghost" id="btn-back-home">← Trang chủ</a>
+        </div>
+    </nav>
+
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="page-header" id="page-header">
+        <div class="breadcrumb">
+            <a href="index.html">Trang chủ</a>
+            <span>›</span>
+            <span>Thực đơn</span>
+        </div>
+        <h1>🍽️ Thực đơn của chúng tôi</h1>
+        <p>Khám phá hàng chục món ăn ngon từ nhiều danh mục phong phú</p>
+    </div>
+
+
+    <!-- ===== MENU LAYOUT ===== -->
+    <div class="menu-layout" id="menu-layout">
+
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+
+            <!-- Danh mục -->
+            <div class="sidebar-card" id="sidebar-categories">
+                <h3>🗂️ Danh mục</h3>
+                <div class="cat-filter-list" id="cat-filter-list">
+                    <!-- Render bởi JS -->
+                    <div class="skeleton" style="height:42px;border-radius:8px;margin-bottom:6px"></div>
+                    <div class="skeleton" style="height:42px;border-radius:8px;margin-bottom:6px"></div>
+                    <div class="skeleton" style="height:42px;border-radius:8px;margin-bottom:6px"></div>
+                </div>
+            </div>
+
+            <!-- Khoảng giá -->
+            <div class="sidebar-card" id="sidebar-price">
+                <h3>💰 Khoảng giá</h3>
+                <div class="price-range-inputs">
+                    <input type="number" id="price-min" placeholder="Từ" min="0" step="5000">
+                    <span>–</span>
+                    <input type="number" id="price-max" placeholder="Đến" min="0" step="5000">
+                </div>
+                <button class="btn-apply-price" id="btn-apply-price" onclick="applyPriceFilter()">
+                    Áp dụng
+                </button>
+            </div>
+
+            <!-- Đánh giá -->
+            <div class="sidebar-card" id="sidebar-rating">
+                <h3>⭐ Đánh giá</h3>
+                <div class="rating-filter" id="rating-filter">
+                    <div class="rating-option active" id="rating-all" onclick="filterByRating(0)">
+                        Tất cả
+                    </div>
+                    <div class="rating-option" id="rating-4" onclick="filterByRating(4)">
+                        <div class="rating-stars">
+                            <span class="s">★</span><span class="s">★</span>
+                            <span class="s">★</span><span class="s">★</span>
+                            <span class="s empty">★</span>
+                        </div>
+                        4 sao trở lên
+                    </div>
+                    <div class="rating-option" id="rating-45" onclick="filterByRating(4.5)">
+                        <div class="rating-stars">
+                            <span class="s">★</span><span class="s">★</span>
+                            <span class="s">★</span><span class="s">★</span>
+                            <span class="s">★</span>
+                        </div>
+                        4.5 sao trở lên
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+
+        <!-- ===== MAIN ===== -->
+        <div class="menu-main" id="menu-main">
+
+            <!-- Toolbar -->
+            <div class="menu-toolbar" id="menu-toolbar">
+                <div class="search-box" id="search-box">
+                    <span>🔍</span>
+                    <input type="text" id="search-input" placeholder="Tìm tên món ăn..." oninput="handleSearchInput()"
+                        onkeyup="handleSearchKeyup(event)" autocomplete="off">
+                    <button id="btn-search" onclick="doSearch()">Tìm</button>
+                </div>
+
+                <div class="toolbar-right">
+                    <select class="sort-select" id="sort-select" onchange="doSort()">
+                        <option value="">Mặc định</option>
+                        <option value="price_asc">Giá tăng dần</option>
+                        <option value="price_desc">Giá giảm dần</option>
+                        <option value="rating">Đánh giá cao</option>
+                        <option value="newest">Mới nhất</option>
+                    </select>
+
+                    <div class="view-toggle" id="view-toggle">
+                        <button class="view-btn active" id="btn-grid-view" onclick="setView('grid')"
+                            title="Dạng lưới">⊞</button>
+                        <button class="view-btn" id="btn-list-view" onclick="setView('list')"
+                            title="Dạng danh sách">☰</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result info + active tags -->
+            <div class="result-info" id="result-info">
+                <span id="result-count">Đang tải...</span>
+                <div class="result-tags" id="result-tags"></div>
+            </div>
+
+            <!-- Food Grid -->
+            <div class="food-grid-menu" id="food-grid">
+                <!-- JS render -->
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination"></div>
+
+        </div>
+    </div>
+
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer" id="footer">
+        <div class="footer-top">
+            <div>
+                <div class="footer-brand">
+                    <div class="logo-icon" style="width:32px;height:32px;font-size:1rem;">🍜</div>
+                    FoodOrder
+                </div>
+                <p>Nền tảng đặt món ăn trực tuyến uy tín, nhanh chóng và tiện lợi.</p>
+            </div>
+            <div>
+                <h4>Liên kết nhanh</h4>
+                <ul>
+                    <li><a href="index.html">Trang chủ</a></li>
+                    <li><a href="menu.html">Thực đơn</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Liên hệ</h4>
+                <ul>
+                    <li>📞 1800 1234</li>
+                    <li>✉️ hello@foodorder.vn</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 FoodOrder – BTL Lập Trình Web</p>
+        </div>
+    </footer>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/menu.js?v=3"></script>
+</body>
+
+</html>
