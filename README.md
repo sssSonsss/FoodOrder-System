@@ -1,11 +1,16 @@
 # FoodOrder-System
 
 Tài liệu này dùng cho luồng phát triển hằng ngày: sửa code -> rebuild -> deploy -> test lại.
+## lệnh để build nhanh 
+
+bash scripts/rebuild.sh
+TOMCAT_HOME=/tmp/foodorder-tomcat/apache-tomcat-10.1.40 bash scripts/deploy-local-tomcat.sh
+
 
 ## 1) Yêu cầu môi trường
 
 - Java: JDK 17+ (có `javac`, `jar`)
-- PostgreSQL local
+- PostgreSQL
 - Tomcat 10 (đang chạy port `8081`)
 - Thư viện trong dự án:
   - `lib/postgresql-42.7.3.jar`
