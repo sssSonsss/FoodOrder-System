@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết món ăn – FoodOrder</title>
+    <meta name="description" content="Xem chi tiết món ăn, thông tin dinh dưỡng, đánh giá và đặt hàng nhanh.">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/food-detail.css">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+    <a class="navbar-brand" href="index.html">
+        <div class="logo-icon">🍜</div>
+        FoodOrder
+    </a>
+    <ul class="navbar-nav">
+        <li><a href="index.html" id="nav-home">Trang chủ</a></li>
+        <li><a href="menu.html" id="nav-menu">Thực đơn</a></li>
+        <li><a href="index.html#about" id="nav-about">Giới thiệu</a></li>
+        <li><a href="index.html#contact" id="nav-contact">Liên hệ</a></li>
+    </ul>
+    <div class="navbar-actions">
+        <a href="menu.html" class="btn btn-ghost" id="btn-back">← Quay lại</a>
+    </div>
+</nav>
+
+
+<!-- ===== DETAIL CONTENT ===== -->
+<div class="detail-wrapper" id="detail-wrapper">
+
+    <!-- Loading skeleton -->
+    <div class="detail-skeleton" id="detail-skeleton">
+        <div class="skeleton" style="height:420px;border-radius:20px;flex:1"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:16px">
+            <div class="skeleton" style="height:24px;width:40%;border-radius:6px"></div>
+            <div class="skeleton" style="height:40px;width:80%;border-radius:6px"></div>
+            <div class="skeleton" style="height:20px;width:60%;border-radius:6px"></div>
+            <div class="skeleton" style="height:80px;border-radius:8px"></div>
+            <div class="skeleton" style="height:50px;border-radius:50px"></div>
+        </div>
+    </div>
+
+    <!-- Actual content -->
+    <div class="detail-content" id="detail-content" style="display:none">
+
+        <!-- Left: Image -->
+        <div class="detail-left" id="detail-left">
+            <div class="detail-img-wrap" id="detail-img-wrap">
+                <div class="detail-img" id="detail-img">
+                    <!-- JS sẽ render ảnh hoặc emoji fallback -->
+                </div>
+                <div class="detail-badge" id="detail-badge"></div>
+                <button class="detail-fav" id="detail-fav" onclick="toggleFavorite()" title="Yêu thích">🤍</button>
+            </div>
+        </div>
+
+        <!-- Right: Info -->
+        <div class="detail-right" id="detail-right">
+
+            <div class="detail-cat" id="detail-cat"><!-- category --></div>
+
+            <h1 class="detail-name" id="detail-name"><!-- name --></h1>
+
+            <div class="detail-meta" id="detail-meta">
+                <div class="detail-rating" id="detail-rating">
+                    <div class="stars" id="detail-stars"></div>
+                    <span id="detail-rating-num"></span>
+                    <span class="detail-reviews" id="detail-reviews"></span>
+                </div>
+                <span class="detail-dot">•</span>
+                <span class="detail-tag-chip" id="detail-cat-chip"></span>
+            </div>
+
+            <div class="detail-price-row" id="detail-price-row">
+                <span class="detail-price" id="detail-price"></span>
+                <div class="detail-ship-info" id="detail-ship-info">
+                    <span>🚚</span> Giao hàng miễn phí từ 100.000đ
+                </div>
+            </div>
+
+            <div class="detail-desc" id="detail-desc"><!-- description --></div>
+
+            <div class="detail-qty-row" id="detail-qty-row">
+                <span class="detail-qty-label">Số lượng:</span>
+                <div class="qty-control" id="qty-control">
+                    <button class="qty-btn-detail" id="btn-qty-minus" onclick="changeQty(-1)">−</button>
+                    <span class="qty-val" id="qty-val">1</span>
+                    <button class="qty-btn-detail" id="btn-qty-plus" onclick="changeQty(1)">+</button>
+                </div>
+            </div>
+
+            <div class="detail-actions" id="detail-actions">
+                <button class="btn btn-primary detail-btn-add" id="btn-add-cart" onclick="addToCart()">
+                    🛒 Thêm vào giỏ
+                </button>
+                <a href="checkout.html"
+                   class="btn btn-outline detail-btn-checkout" id="btn-checkout">
+                    ⚡ Đặt ngay
+                </a>
+            </div>
+
+            <!-- Info chips -->
+            <div class="detail-chips" id="detail-chips">
+                <div class="chip" id="chip-1">✅ Đảm bảo vệ sinh</div>
+                <div class="chip" id="chip-2">🔥 Chế biến mới</div>
+                <div class="chip" id="chip-3">⏱️ Giao trong 30 phút</div>
+                <div class="chip" id="chip-4">💳 Thanh toán đa dạng</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div class="empty-state" id="detail-error" style="display:none">
+        <div class="empty-state__icon">😔</div>
+        <h3>Không tìm thấy món ăn</h3>
+        <p>Món ăn này không tồn tại hoặc đã ngừng bán.</p>
+        <a href="menu.html" class="btn btn-primary" id="btn-back-menu" style="margin-top:20px">
+            ← Quay lại thực đơn
+        </a>
+    </div>
+
+</div>
+
+
+<!-- ===== RELATED FOODS ===== -->
+<section class="section" id="related-section" style="display:none">
+    <div class="section-header">
+        <div class="section-tag">🍽️ Gợi ý thêm</div>
+        <h2 class="section-title">Món cùng danh mục</h2>
+    </div>
+    <div class="food-grid" id="related-grid">
+        <!-- JS render -->
+    </div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer" id="footer">
+    <div class="footer-top">
+        <div>
+            <div class="footer-brand">
+                <div class="logo-icon" style="width:32px;height:32px;font-size:1rem;">🍜</div>
+                FoodOrder
+            </div>
+            <p>Nền tảng đặt món ăn trực tuyến uy tín, nhanh chóng và tiện lợi.</p>
+        </div>
+        <div>
+            <h4>Liên kết nhanh</h4>
+            <ul>
+                <li><a href="index.html">Trang chủ</a></li>
+                <li><a href="menu.html">Thực đơn</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Liên hệ</h4>
+            <ul>
+                <li>📞 1800 1234</li>
+                <li>✉️ hello@foodorder.vn</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>© 2025 FoodOrder – BTL Lập Trình Web</p>
+    </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="js/food-detail.js"></script>
+</body>
+</html>

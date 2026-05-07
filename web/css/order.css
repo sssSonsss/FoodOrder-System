@@ -1,0 +1,168 @@
+/* ==============================================
+   order.css – Giao diện đơn hàng và tracking
+   ============================================== */
+
+.order-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 5% 64px;
+}
+
+.order-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 18px;
+}
+
+.order-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.status-cho_xac_nhan, .status-dang_chuan_bi {
+    background: #fff4db;
+    color: #b87c00;
+}
+
+.status-shipper_da_lay, .status-dang_giao {
+    background: #e8f2ff;
+    color: #2766b5;
+}
+
+.status-da_giao_thanh_cong {
+    background: #e8f8ee;
+    color: #1d8c4c;
+}
+
+.status-da_huy {
+    background: #fdeceb;
+    color: #c2372a;
+}
+
+.order-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.order-tab {
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.order-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.order-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.order-items .item-row {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+}
+
+.order-items .item-row:last-child {
+    border-bottom: none;
+}
+
+.thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--border);
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.timeline {
+    position: relative;
+    margin-left: 8px;
+}
+
+.timeline::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 4px;
+    bottom: 6px;
+    width: 2px;
+    background: #d9e0e8;
+}
+
+.timeline-step {
+    position: relative;
+    padding-left: 42px;
+    margin-bottom: 18px;
+}
+
+.timeline-step::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #c2cfdd;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px #c2cfdd;
+}
+
+.timeline-step.done::before {
+    background: var(--success);
+    box-shadow: 0 0 0 1px var(--success);
+}
+
+.timeline-step.current::before {
+    background: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.form-review {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.form-review textarea,
+.form-review select {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-family: var(--font-main);
+}

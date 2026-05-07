@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - FoodOrder</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <a class="navbar-brand" href="index.html">
+        <div class="logo-icon">🍜</div>
+        FoodOrder
+    </a>
+    <div class="navbar-actions">
+        <a class="btn btn-ghost" href="menu.html">← Quay lại thực đơn</a>
+    </div>
+</nav>
+
+<section class="section" style="max-width:760px;margin:0 auto;">
+    <div class="section-header" style="text-align:left;margin-bottom:20px;">
+        <div class="section-tag">🧾 Checkout</div>
+        <h2 class="section-title">Xác nhận đặt đơn</h2>
+        <p class="section-desc" style="margin:0;">Trang này gọi trực tiếp `OrderServlet` để tạo đơn hàng từ giỏ.</p>
+    </div>
+
+    <div class="order-card" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;">
+        <form method="post" action="OrderServlet">
+            <input type="hidden" name="action" value="create">
+
+            <label for="userId" style="display:block;font-weight:600;margin-bottom:6px;">User ID (chỉ dùng khi test local):</label>
+            <input id="userId" name="userId" type="number" min="1" placeholder="Ví dụ: 1"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+
+            <label for="addressId" style="display:block;font-weight:600;margin-bottom:6px;">Địa chỉ giao hàng (address_id):</label>
+            <input id="addressId" name="addressId" type="number" min="1" required placeholder="Ví dụ: 1"
+                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+
+            <p style="color:var(--text-mid);font-size:.92rem;margin-bottom:14px;">
+                Lưu ý: API tạo đơn hiện lấy dữ liệu từ bảng `cart_items` trong database.
+            </p>
+
+            <button class="btn btn-primary" type="submit">✅ Xác nhận đặt hàng</button>
+            <a class="btn btn-outline" href="OrderServlet?action=my-page">📦 Đơn hàng của tôi</a>
+        </form>
+    </div>
+</section>
+</body>
+</html>
