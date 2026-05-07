@@ -369,11 +369,26 @@ function toggleFav(btn, foodId) {
 
 // ===== CART =====
 function quickAddToCart(id, name, price) {
-    const cart = JSON.parse(localStorage.getItem('food_cart') || '[]');
-    const ex = cart.find(x => x.id === id);
-    if (ex) ex.quantity++; else cart.push({ id, name, price, quantity: 1 });
-    localStorage.setItem('food_cart', JSON.stringify(cart));
-    showToast(`🛒 Đã thêm "${name}"`, 'success');
+    fetch("CartServlet", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            action: "add",
+            foodId: String(id),
+            quantity: "1"
+        }).toString()
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            showToast(data.error, "error");
+            return;
+        }
+        showToast(`🛒 Đã thêm "${name}"`, 'success');
+    })
+    .catch(() => {
+        showToast("Không thể thêm món vào giỏ hàng", "error");
+    });
 }
 
 // ===== HELPERS =====

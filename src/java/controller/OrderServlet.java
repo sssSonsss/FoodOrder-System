@@ -43,7 +43,7 @@ public class OrderServlet extends HttpServlet {
             List<Order> orders = orderDAO.getOrdersByUser(userId, status);
             request.setAttribute("orders", orders);
             request.setAttribute("activeStatus", status == null ? "" : status);
-            request.getRequestDispatcher("/web/my-orders.jsp").forward(request, response);
+            request.getRequestDispatcher("/my-orders.jsp").forward(request, response);
             return;
         }
 
@@ -97,7 +97,7 @@ public class OrderServlet extends HttpServlet {
         int addressId = parseInt(request.getParameter("addressId"), 0);
         if (addressId <= 0) {
             request.setAttribute("errorMessage", "Địa chỉ giao hàng không hợp lệ.");
-            request.getRequestDispatcher("/web/order-success.jsp").forward(request, response);
+            request.getRequestDispatcher("/order-success.jsp").forward(request, response);
             return;
         }
 
@@ -109,10 +109,10 @@ public class OrderServlet extends HttpServlet {
                 request.setAttribute("successMessage", "Đặt hàng thành công. Cảm ơn bạn đã tin tưởng FoodOrder.");
                 request.setAttribute("orderId", orderId);
             }
-            request.getRequestDispatcher("/web/order-success.jsp").forward(request, response);
+            request.getRequestDispatcher("/order-success.jsp").forward(request, response);
         } catch (Exception e) {
             request.setAttribute("errorMessage", "Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.");
-            request.getRequestDispatcher("/web/order-success.jsp").forward(request, response);
+            request.getRequestDispatcher("/order-success.jsp").forward(request, response);
         }
     }
 
@@ -138,7 +138,7 @@ public class OrderServlet extends HttpServlet {
         if ("page".equals(request.getParameter("view"))) {
             request.setAttribute("order", order);
             request.setAttribute("items", items);
-            request.getRequestDispatcher("/web/order-detail.jsp").forward(request, response);
+            request.getRequestDispatcher("/order-detail.jsp").forward(request, response);
             return;
         }
 
@@ -222,7 +222,10 @@ public class OrderServlet extends HttpServlet {
                 if (id > 0) return id;
             }
         }
-        return parseInt(request.getParameter("userId"), 0);
+        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
+        if (userIdFromParam > 0) return userIdFromParam;
+        // Fake user để test end-to-end khi chưa có đăng nhập
+        return 1;
     }
 
     private int parseObjectToInt(Object value) {

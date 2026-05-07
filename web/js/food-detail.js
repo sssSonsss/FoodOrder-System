@@ -142,17 +142,31 @@ function toggleFavorite() {
 // ===== ADD TO CART =====
 function addToCart() {
     if (!currentFood) return;
-    const cart = JSON.parse(localStorage.getItem('food_cart') || '[]');
-    const ex = cart.find(x => x.id === currentFood.id);
-    if (ex) ex.quantity += quantity;
-    else cart.push({ id: currentFood.id, name: currentFood.name, price: currentFood.price, quantity });
-    localStorage.setItem('food_cart', JSON.stringify(cart));
-    showToast(`🛒 Đã thêm ${quantity}x "${currentFood.name}" vào giỏ`, 'success');
+    fetch("CartServlet", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            action: "add",
+            foodId: String(currentFood.id),
+            quantity: String(quantity)
+        }).toString()
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            showToast(data.error, "error");
+            return;
+        }
+        showToast(`🛒 Đã thêm ${quantity}x "${currentFood.name}" vào giỏ`, 'success');
 
-    // Animate button
-    const btn = document.getElementById('btn-add-cart');
-    btn.textContent = '✓ Đã thêm!';
-    setTimeout(() => { btn.textContent = '🛒 Thêm vào giỏ'; }, 2000);
+        // Animate button
+        const btn = document.getElementById('btn-add-cart');
+        btn.textContent = '✓ Đã thêm!';
+        setTimeout(() => { btn.textContent = '🛒 Thêm vào giỏ'; }, 2000);
+    })
+    .catch(() => {
+        showToast("Không thể thêm vào giỏ hàng", "error");
+    });
 }
 
 // ===== RELATED FOODS =====

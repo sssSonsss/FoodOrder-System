@@ -55,7 +55,7 @@ public class OrderTrackingServlet extends HttpServlet {
         List<OrderStatusLog> logs = orderDAO.getStatusLogs(orderId);
         request.setAttribute("order", order);
         request.setAttribute("statusLogs", logs);
-        request.getRequestDispatcher("/web/order-tracking.jsp").forward(request, response);
+        request.getRequestDispatcher("/order-tracking.jsp").forward(request, response);
     }
 
     private String calculateStatusByElapsedTime(String createdAt, String currentStatus) {
@@ -105,7 +105,10 @@ public class OrderTrackingServlet extends HttpServlet {
                 if (id > 0) return id;
             }
         }
-        return parseInt(request.getParameter("userId"), 0);
+        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
+        if (userIdFromParam > 0) return userIdFromParam;
+        // Fake user để test end-to-end khi chưa có đăng nhập
+        return 1;
     }
 
     private int parseObjectToInt(Object value) {

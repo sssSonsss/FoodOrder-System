@@ -35,6 +35,16 @@ CREATE TABLE IF NOT EXISTS foods (
     review_count INT DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS cart_items (
+    id           SERIAL PRIMARY KEY,
+    user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    food_id      INT NOT NULL REFERENCES foods(id) ON DELETE CASCADE,
+    quantity     INT NOT NULL CHECK (quantity > 0),
+    UNIQUE(user_id, food_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON cart_items(user_id);
+
 -- ==================================================
 -- MODULE ĐƠN HÀNG & TRACKING
 -- ==================================================
