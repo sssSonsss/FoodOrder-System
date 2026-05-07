@@ -103,6 +103,7 @@ function renderDetail(f) {
     // Show content
     document.getElementById('detail-skeleton').style.display = 'none';
     document.getElementById('detail-content').style.display = 'grid';
+    updateCheckoutLink();
 }
 
 function showError() {
@@ -115,6 +116,7 @@ function showError() {
 function changeQty(delta) {
     quantity = Math.max(1, quantity + delta);
     document.getElementById('qty-val').textContent = quantity;
+    updateCheckoutLink();
 }
 
 // ===== FAVORITE =====
@@ -223,5 +225,17 @@ function showToast(msg, type = '') {
     const t = document.getElementById('toast');
     t.textContent = msg; t.className = 'toast show ' + type;
     setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+function updateCheckoutLink() {
+    const btnCheckout = document.getElementById("btn-checkout");
+    if (!btnCheckout || !currentFood) return;
+    btnCheckout.href = `checkout.html?foodId=${currentFood.id}&quantity=${quantity}`;
+}
+
+function goToCheckout(event) {
+    if (!currentFood) return;
+    event.preventDefault();
+    window.location.href = `checkout.html?foodId=${currentFood.id}&quantity=${quantity}`;
 }
 

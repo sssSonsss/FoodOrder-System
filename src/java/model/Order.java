@@ -5,13 +5,13 @@ public class Order {
     private int id;
     private int userId;
     private double totalPrice;
-    private String status;
+    private int status;
     private int addressId;
     private String createdAt;
 
     public Order() {}
 
-    public Order(int id, int userId, double totalPrice, String status, int addressId, String createdAt) {
+    public Order(int id, int userId, double totalPrice, int status, int addressId, String createdAt) {
         this.id = id;
         this.userId = userId;
         this.totalPrice = totalPrice;
@@ -29,8 +29,8 @@ public class Order {
     public double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(double totalPrice) { this.totalPrice = totalPrice; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public int getStatus() { return status; }
+    public void setStatus(int status) { this.status = status; }
 
     public int getAddressId() { return addressId; }
     public void setAddressId(int addressId) { this.addressId = addressId; }

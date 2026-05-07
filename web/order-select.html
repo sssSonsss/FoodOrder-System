@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt hàng - FoodOrder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .select-wrap { max-width: 900px; margin: 0 auto; padding: 30px 5% 64px; }
+        .panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px; }
+        .item { display:grid; grid-template-columns:84px 1fr auto; gap:12px; align-items:center; }
+        .thumb { width:84px; height:84px; border-radius:10px; object-fit:cover; border:1px solid var(--border); box-shadow:var(--shadow-sm); background:var(--border); }
+        .qty { display:flex; align-items:center; gap:8px; }
+        .qty button { width:34px; height:34px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+        .qty span { min-width:30px; text-align:center; font-weight:700; }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
+    <div class="navbar-actions">
+        <a class="btn btn-ghost" href="menu.html">← Quay lại thực đơn</a>
+    </div>
+</nav>
+
+<section class="select-wrap">
+    <div class="section-header" style="text-align:left;margin-bottom:16px;">
+        <div class="section-tag">🛒 Bước 1</div>
+        <h2 class="section-title">Đặt hàng</h2>
+        <p class="section-desc" style="margin:0;">Chọn số lượng món trước khi chuyển sang bước xác nhận.</p>
+    </div>
+
+    <div class="panel">
+        <div class="item" id="order-item"></div>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+            <div>
+                <div style="color:var(--text-light);font-size:.9rem;">Tạm tính</div>
+                <div id="subtotal" style="font-size:1.2rem;font-weight:800;color:var(--primary);">0đ</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a class="btn btn-outline" href="menu.html">Chọn món khác</a>
+                <button class="btn btn-primary" onclick="goConfirm()">Tiếp tục xác nhận</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    const p = new URLSearchParams(window.location.search);
+    const foodId = Number(p.get("foodId") || 0);
+    let quantity = Math.max(1, Number(p.get("quantity") || 1));
+    let currentFood = null;
+
+    function formatMoney(v) {
+        return Number(v || 0).toLocaleString("vi-VN") + "đ";
+    }
+
+    function render() {
+        if (!currentFood) return;
+        const wrap = document.getElementById("order-item");
+        wrap.innerHTML = `
+            <img class="thumb" src="${currentFood.image_url || 'images/food-placeholder.svg'}"
+                 onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
+            <div>
+                <strong style="font-size:1.05rem;">${currentFood.name || ""}</strong>
+                <div style="color:var(--text-light);">${currentFood.description || ""}</div>
+                <div style="margin-top:6px;color:var(--primary);font-weight:700;">${formatMoney(currentFood.price)}</div>
+            </div>
+            <div class="qty">
+                <button onclick="changeQty(-1)">-</button>
+                <span id="qty">${quantity}</span>
+                <button onclick="changeQty(1)">+</button>
+            </div>
+        `;
+        document.getElementById("subtotal").textContent = formatMoney(Number(currentFood.price) * quantity);
+    }
+
+    function changeQty(delta) {
+        quantity = Math.max(1, quantity + delta);
+        render();
+    }
+
+    function goConfirm() {
+        if (!currentFood) return;
+        window.location.href = `checkout.html?foodId=${currentFood.id}&quantity=${quantity}`;
+    }
+
+    if (foodId > 0) {
+        fetch(`FoodServlet?id=${foodId}`)
+            .then(r => r.json())
+            .then(food => {
+                currentFood = food;
+                render();
+            })
+            .catch(() => {
+                document.getElementById("order-item").innerHTML = "<p>Không tải được thông tin món ăn. Vui lòng thử lại.</p>";
+            });
+    } else {
+        document.getElementById("order-item").innerHTML = "<p>Chưa chọn món ăn. Vui lòng quay lại thực đơn.</p>";
+    }
+</script>
+</body>
+</html>

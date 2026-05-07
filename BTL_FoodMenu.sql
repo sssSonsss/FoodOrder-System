@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id           SERIAL PRIMARY KEY,
     user_id      INT NOT NULL REFERENCES users(id),
     total_price  NUMERIC(12,0) NOT NULL DEFAULT 0,
-    status       VARCHAR(30) NOT NULL DEFAULT 'CHO_XAC_NHAN',
+    status       INT NOT NULL DEFAULT 0,
     address_id   INT NOT NULL,
     created_at   TIMESTAMP DEFAULT NOW()
 );
@@ -68,9 +68,9 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS order_status_logs (
     id           SERIAL PRIMARY KEY,
     order_id     INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    status       VARCHAR(30) NOT NULL,
+    status       INT NOT NULL,
     note         VARCHAR(255),
-    created_at   TIMESTAMP DEFAULT NOW()
+    update_time  TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS reviews (
@@ -88,6 +88,56 @@ CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_order_status_logs_order_id ON order_status_logs(order_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_food_id ON reviews(food_id);
+CREATE TABLE IF NOT EXISTS notifications (
+    id          SERIAL PRIMARY KEY,
+    user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title       VARCHAR(150) NOT NULL,
+    message     VARCHAR(500) NOT NULL,
+    type        VARCHAR(20) NOT NULL DEFAULT 'SYSTEM',
+    is_read     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+
+-- Nâng cấp dữ liệu cũ sang status dạng số (nếu đang dùng text)
+ALTER TABLE orders ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE orders ALTER COLUMN status TYPE INT
+USING (
+    CASE
+        WHEN status::text IN ('0','1','2','3','4') THEN status::text::INT
+        WHEN status::text = 'CHO_XAC_NHAN' THEN 0
+        WHEN status::text = 'DANG_CHUAN_BI' THEN 1
+        WHEN status::text IN ('SHIPPER_DA_LAY','DANG_GIAO') THEN 2
+        WHEN status::text = 'DA_GIAO_THANH_CONG' THEN 3
+        WHEN status::text = 'DA_HUY' THEN 4
+        ELSE 0
+    END
+);
+ALTER TABLE orders ALTER COLUMN status SET DEFAULT 0;
+
+ALTER TABLE order_status_logs ADD COLUMN IF NOT EXISTS update_time TIMESTAMP DEFAULT NOW();
+
+-- Dùng ảnh placeholder theo nhóm món để tránh lỗi 404 và đảm bảo dữ liệu demo luôn hiển thị
+UPDATE foods
+SET image_url = CASE
+    WHEN category_id = 1 THEN 'images/trasua-placeholder.svg'
+    WHEN category_id = 2 THEN 'images/banhmi-placeholder.svg'
+    WHEN category_id = 3 THEN 'images/com-placeholder.svg'
+    WHEN category_id = 4 THEN 'images/bunpho-placeholder.svg'
+    WHEN category_id = 5 THEN 'images/chay-placeholder.svg'
+    WHEN category_id = 6 THEN 'images/dessert-placeholder.svg'
+    ELSE 'images/food-placeholder.svg'
+END;
+
+-- Nguồn tham khảo hình ảnh theo nhóm món (dùng để mô tả ý tưởng ảnh fake trong demo):
+-- Hamburger: http://www.maki.vn/tips/9-bi-quyet-chup-anh-mon-an-dep-chuyen-nghiep-nghe-thuat
+-- Bánh mì: https://www.tripadvisor.com.vn/Restaurant_Review-g293925-d17757797-Reviews-Banh_Mi_362-Ho_Chi_Minh_City.html
+-- Trà sữa: https://simexcodl.com.vn/tra-sua-ca-phe/
+-- Nước ép bơ: https://www.dienmayxanh.com/vao-bep/cach-lam-sinh-to-bo-ngon-beo-ngot-dung-vi-00562
+-- Cơm: https://lalago.vn/com-tam-hoi-an/
+-- Đồ chay: https://fptshop.com.vn/tin-tuc/dien-may/quan-chay-quan-8-167167
+-- Bún phở: https://thanhnien.vn/9-quan-bun-pho-khong-the-bo-qua-o-ha-noi-trong-danh-sach-michelin-185250224152555628.htm
+-- Tráng miệng: https://ezcloud.vn/dessert-la-gi.html
 
 
 -- ==================================================

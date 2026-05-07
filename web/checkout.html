@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout - FoodOrder</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .checkout-wrap { max-width: 980px; margin: 0 auto; padding: 30px 5% 64px; }
+        .checkout-grid { display: grid; grid-template-columns: 1.4fr .9fr; gap: 16px; }
+        .panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px; }
+        .item-row { display:grid; grid-template-columns:64px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border); }
+        .item-row:last-child { border-bottom:none; }
+        .thumb { width:64px; height:64px; border-radius:10px; object-fit:cover; background:var(--border); }
+        .thumb.frame { border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .pay-option { border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px; display:flex; gap:8px; align-items:flex-start; }
+        .ship-option { border:1px solid var(--border); border-radius:10px; padding:10px; margin-top:8px; display:flex; gap:8px; align-items:flex-start; }
+        .sum-row { display:flex; justify-content:space-between; margin-bottom:8px; }
+        .voucher-row { display:flex; gap:8px; margin-top:12px; }
+        .voucher-row input { flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; }
+        @media (max-width: 900px) { .checkout-grid { grid-template-columns:1fr; } }
+    </style>
 </head>
 <body>
 <nav class="navbar">
@@ -17,33 +32,207 @@
     </div>
 </nav>
 
-<section class="section" style="max-width:760px;margin:0 auto;">
-    <div class="section-header" style="text-align:left;margin-bottom:20px;">
-        <div class="section-tag">🧾 Checkout</div>
-        <h2 class="section-title">Xác nhận đặt đơn</h2>
-        <p class="section-desc" style="margin:0;">Trang này gọi trực tiếp `OrderServlet` để tạo đơn hàng từ giỏ.</p>
+<section class="checkout-wrap">
+    <div class="section-header" style="text-align:left;margin-bottom:16px;">
+        <div class="section-tag">🧾 Bước 1</div>
+        <h2 class="section-title">Đặt hàng</h2>
+        <p class="section-desc" style="margin:0;">Chọn phương thức và thông tin đơn hàng trước khi sang bước xác nhận.</p>
     </div>
 
-    <div class="order-card" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;">
-        <form method="post" action="OrderServlet">
-            <input type="hidden" name="action" value="create">
+    <form id="checkout-form">
+        <input type="hidden" name="action" value="create">
+        <input type="hidden" name="paymentMethod" id="paymentMethod" value="COD">
+        <input type="hidden" name="shippingMethod" id="shippingMethod" value="STANDARD">
+        <input type="hidden" name="voucherCode" id="voucherCode" value="">
+        <div class="checkout-grid">
+            <div class="panel">
+                <h3 style="margin-bottom:10px;">Sản phẩm trong đơn</h3>
+                <div id="checkout-items"></div>
+            </div>
 
-            <label for="userId" style="display:block;font-weight:600;margin-bottom:6px;">User ID (chỉ dùng khi test local):</label>
-            <input id="userId" name="userId" type="number" min="1" placeholder="Ví dụ: 1"
-                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+            <div class="panel">
+                <h3 style="margin-bottom:10px;">Thông tin nhận hàng</h3>
+                <label for="addressId" style="display:block;font-weight:600;margin-bottom:6px;">Mã địa chỉ (address_id):</label>
+                <input id="addressId" name="addressId" type="number" min="1" required placeholder="Ví dụ: 1"
+                       style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
 
-            <label for="addressId" style="display:block;font-weight:600;margin-bottom:6px;">Địa chỉ giao hàng (address_id):</label>
-            <input id="addressId" name="addressId" type="number" min="1" required placeholder="Ví dụ: 1"
-                   style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+                <h3 style="margin-bottom:8px;">Phương thức thanh toán</h3>
+                <label class="pay-option">
+                    <input type="radio" name="pay" value="COD" checked onchange="setPayMethod(this.value)">
+                    <span><strong>Thanh toán khi nhận hàng (COD)</strong><br><small>Trả tiền mặt cho shipper khi nhận món.</small></span>
+                </label>
+                <label class="pay-option">
+                    <input type="radio" name="pay" value="VNPAY" onchange="setPayMethod(this.value)">
+                    <span><strong>Ví điện tử / QR</strong><br><small>Giả lập thanh toán online qua ví điện tử.</small></span>
+                </label>
+                <label class="pay-option">
+                    <input type="radio" name="pay" value="CARD" onchange="setPayMethod(this.value)">
+                    <span><strong>Thẻ ngân hàng</strong><br><small>Giả lập thanh toán qua thẻ nội địa/quốc tế.</small></span>
+                </label>
 
-            <p style="color:var(--text-mid);font-size:.92rem;margin-bottom:14px;">
-                Lưu ý: API tạo đơn hiện lấy dữ liệu từ bảng `cart_items` trong database.
-            </p>
+                <h3 style="margin:14px 0 8px;">Phương thức vận chuyển</h3>
+                <label class="ship-option">
+                    <input type="radio" name="ship" value="STANDARD" checked onchange="setShipMethod(this.value)">
+                    <span><strong>Giao tiêu chuẩn</strong><br><small>Nhận trong 30 - 45 phút. Phí: 15.000đ</small></span>
+                </label>
+                <label class="ship-option">
+                    <input type="radio" name="ship" value="FAST" onchange="setShipMethod(this.value)">
+                    <span><strong>Giao nhanh</strong><br><small>Ưu tiên giao trong 15 - 25 phút. Phí: 25.000đ</small></span>
+                </label>
 
-            <button class="btn btn-primary" type="submit">✅ Xác nhận đặt hàng</button>
-            <a class="btn btn-outline" href="OrderServlet?action=my-page">📦 Đơn hàng của tôi</a>
-        </form>
-    </div>
+                <div class="voucher-row">
+                    <input type="text" id="voucherInput" placeholder="Nhập mã giảm giá (VD: NEWUSER, FREESHIP)">
+                    <button class="btn btn-outline" type="button" onclick="applyVoucher()">Áp dụng</button>
+                </div>
+                <small id="voucherMessage" style="display:block;margin-top:6px;color:var(--text-light);">Chưa áp dụng mã giảm giá.</small>
+
+                <div style="margin-top:14px;">
+                    <div class="sum-row"><span>Tạm tính</span><strong id="sum-subtotal">0đ</strong></div>
+                    <div class="sum-row"><span>Giảm giá voucher</span><strong id="sum-discount">0đ</strong></div>
+                    <div class="sum-row"><span>Phí giao hàng</span><strong id="sum-shipping">15.000đ</strong></div>
+                    <div class="sum-row" style="font-size:1.08rem;"><span>Tổng thanh toán</span><strong id="sum-total" style="color:var(--primary);">0đ</strong></div>
+                </div>
+
+                <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" type="submit">➡️ Tiếp tục xác nhận</button>
+                    <a class="btn btn-outline" href="CartServlet?view=cart">🛒 Quay về giỏ hàng</a>
+                </div>
+            </div>
+        </div>
+    </form>
+    <script>
+        const query = new URLSearchParams(window.location.search);
+        const foodId = Number(query.get("foodId") || 0);
+        const quantity = Math.max(1, Number(query.get("quantity") || 1));
+        let subtotal = 0;
+        let discount = 0;
+        let shippingFee = 15000;
+
+        function formatMoney(v) {
+            return Number(v || 0).toLocaleString("vi-VN") + "đ";
+        }
+
+        function setPayMethod(v) {
+            document.getElementById("paymentMethod").value = v;
+        }
+
+        function setShipMethod(v) {
+            document.getElementById("shippingMethod").value = v;
+            shippingFee = v === "FAST" ? 25000 : 15000;
+            updateSummary();
+        }
+
+        function applyVoucher() {
+            const code = (document.getElementById("voucherInput").value || "").trim().toUpperCase();
+            const msg = document.getElementById("voucherMessage");
+            document.getElementById("voucherCode").value = code;
+            if (!code) {
+                discount = 0;
+                msg.textContent = "Chưa áp dụng mã giảm giá.";
+                msg.style.color = "var(--text-light)";
+                updateSummary();
+                return;
+            }
+            if (code === "NEWUSER") {
+                discount = Math.round(subtotal * 0.2);
+                msg.textContent = "Áp dụng NEWUSER thành công: giảm 20%.";
+                msg.style.color = "var(--success)";
+            } else if (code === "FREESHIP") {
+                discount = shippingFee;
+                msg.textContent = "Áp dụng FREESHIP thành công: miễn phí vận chuyển.";
+                msg.style.color = "var(--success)";
+            } else {
+                discount = 0;
+                msg.textContent = "Mã không hợp lệ hoặc đã hết hạn.";
+                msg.style.color = "var(--danger)";
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById("sum-subtotal").textContent = formatMoney(subtotal);
+            document.getElementById("sum-discount").textContent = "-" + formatMoney(discount);
+            document.getElementById("sum-shipping").textContent = formatMoney(shippingFee);
+            const total = Math.max(0, subtotal + shippingFee - discount);
+            document.getElementById("sum-total").textContent = formatMoney(total);
+        }
+
+        function renderItems(items) {
+            const wrap = document.getElementById("checkout-items");
+            if (!items || !items.length) {
+                wrap.innerHTML = "<p>Chưa có sản phẩm để thanh toán. Vui lòng thêm món vào giỏ hàng.</p>";
+                document.querySelector("button[type='submit']").disabled = true;
+                return;
+            }
+            let total = 0;
+            wrap.innerHTML = "";
+            items.forEach(it => {
+                total += Number(it.price) * Number(it.quantity);
+                const row = document.createElement("div");
+                row.className = "item-row";
+                row.innerHTML = `
+                    <img class="thumb frame" src="${it.image || "images/food-placeholder.svg"}" alt="Ảnh món ăn"
+                         onerror="this.src='images/food-placeholder.svg'">
+                    <div>
+                        <strong>${it.food_name || ""}</strong>
+                        <div style="color:var(--text-light);">Số lượng: ${it.quantity}</div>
+                    </div>
+                    <strong style="color:var(--primary);">${formatMoney(Number(it.price) * Number(it.quantity))}</strong>
+                `;
+                wrap.appendChild(row);
+            });
+            subtotal = total;
+            updateSummary();
+        }
+
+        function loadFromCart() {
+            fetch("CartServlet?view=cart-data")
+                .then(r => r.json())
+                .then(data => renderItems(data.items || []))
+                .catch(() => renderItems([]));
+        }
+
+        function loadBuyNow() {
+            fetch(`FoodServlet?id=${foodId}`)
+                .then(r => r.json())
+                .then(food => {
+                    renderItems([{
+                        food_id: food.id,
+                        food_name: food.name,
+                        price: food.price,
+                        quantity: quantity,
+                        image: food.image_url
+                    }]);
+                })
+                .catch(() => loadFromCart());
+        }
+
+        document.getElementById("checkout-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const addressId = Number(document.getElementById("addressId").value || 0);
+            if (addressId <= 0) {
+                alert("Vui lòng nhập mã địa chỉ giao hàng hợp lệ.");
+                return;
+            }
+
+            const confirmParams = new URLSearchParams({
+                foodId: String(foodId),
+                quantity: String(quantity),
+                addressId: String(addressId),
+                paymentMethod: document.getElementById("paymentMethod").value || "COD",
+                shippingMethod: document.getElementById("shippingMethod").value || "STANDARD",
+                voucherCode: document.getElementById("voucherCode").value || "",
+                discount: String(discount),
+                shippingFee: String(shippingFee),
+                subtotal: String(subtotal),
+                total: String(Math.max(0, subtotal + shippingFee - discount))
+            });
+
+            window.location.href = "order-confirm.html?" + confirmParams.toString();
+        });
+
+        if (foodId > 0) loadBuyNow(); else loadFromCart();
+    </script>
 </section>
 </body>
 </html>

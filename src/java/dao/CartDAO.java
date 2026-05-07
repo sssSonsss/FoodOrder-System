@@ -104,6 +104,7 @@ public class CartDAO {
 
     public boolean checkStock(int foodId, int quantity) {
         if (quantity <= 0) return false;
+        if (quantity > 10) return false;
         String sql = "SELECT COUNT(*) FROM foods WHERE id = ? AND is_active = true";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

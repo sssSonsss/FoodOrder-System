@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác nhận đơn hàng - FoodOrder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .confirm-wrap { max-width: 980px; margin: 0 auto; padding: 30px 5% 64px; }
+        .confirm-grid { display:grid; grid-template-columns: 1.4fr .9fr; gap: 16px; }
+        .panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px; }
+        .item-row { display:grid; grid-template-columns:64px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border); }
+        .item-row:last-child { border-bottom:none; }
+        .thumb { width:64px; height:64px; border-radius:10px; object-fit:cover; border:1px solid var(--border); box-shadow:var(--shadow-sm); background:var(--border); }
+        .sum-row { display:flex; justify-content:space-between; margin-bottom:8px; }
+        .info-line { margin-bottom:8px; }
+        @media (max-width: 900px) { .confirm-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
+    <div class="navbar-actions"><a class="btn btn-ghost" href="checkout.html">← Quay lại bước Đặt hàng</a></div>
+</nav>
+
+<section class="confirm-wrap">
+    <div class="section-header" style="text-align:left;margin-bottom:16px;">
+        <div class="section-tag">✅ Bước 2</div>
+        <h2 class="section-title">Xác nhận đơn hàng</h2>
+        <p class="section-desc" style="margin:0;">Kiểm tra lại thông tin đã chọn từ bước Đặt hàng trước khi bấm Đặt đơn.</p>
+    </div>
+
+    <form id="confirm-form" method="post" action="OrderServlet">
+        <input type="hidden" name="action" value="create">
+        <input type="hidden" name="addressId" id="f-addressId" value="">
+        <input type="hidden" name="paymentMethod" id="f-paymentMethod" value="">
+        <input type="hidden" name="shippingMethod" id="f-shippingMethod" value="">
+        <input type="hidden" name="voucherCode" id="f-voucherCode" value="">
+
+        <div class="confirm-grid">
+            <div class="panel">
+                <h3 style="margin-bottom:10px;">Sản phẩm đã chọn</h3>
+                <div id="confirm-items"></div>
+            </div>
+            <div class="panel">
+                <h3 style="margin-bottom:10px;">Thông tin đã chốt</h3>
+                <div class="info-line"><strong>Địa chỉ giao hàng:</strong> <span id="v-address">-</span></div>
+                <div class="info-line"><strong>Thanh toán:</strong> <span id="v-payment">-</span></div>
+                <div class="info-line"><strong>Vận chuyển:</strong> <span id="v-shipping">-</span></div>
+                <div class="info-line"><strong>Voucher:</strong> <span id="v-voucher">Không áp dụng</span></div>
+
+                <div style="margin-top:14px;">
+                    <div class="sum-row"><span>Tạm tính</span><strong id="sum-subtotal">0đ</strong></div>
+                    <div class="sum-row"><span>Giảm giá voucher</span><strong id="sum-discount">0đ</strong></div>
+                    <div class="sum-row"><span>Phí giao hàng</span><strong id="sum-shipping">0đ</strong></div>
+                    <div class="sum-row" style="font-size:1.08rem;"><span>Tổng thanh toán</span><strong id="sum-total" style="color:var(--primary);">0đ</strong></div>
+                </div>
+
+                <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" type="submit">🎉 Đặt đơn</button>
+                    <a class="btn btn-outline" id="back-order-btn" href="checkout.html">⬅️ Sửa thông tin</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+    const q = new URLSearchParams(window.location.search);
+    const foodId = Number(q.get("foodId") || 0);
+    const quantity = Math.max(1, Number(q.get("quantity") || 1));
+    const addressId = q.get("addressId") || "1";
+    const paymentMethod = q.get("paymentMethod") || "COD";
+    const shippingMethod = q.get("shippingMethod") || "STANDARD";
+    const voucherCode = q.get("voucherCode") || "";
+    const subtotal = Number(q.get("subtotal") || 0);
+    const discount = Number(q.get("discount") || 0);
+    const shippingFee = Number(q.get("shippingFee") || 0);
+    const total = Number(q.get("total") || 0);
+
+    function formatMoney(v) { return Number(v || 0).toLocaleString("vi-VN") + "đ"; }
+    function payLabel(v) {
+        if (v === "VNPAY") return "Ví điện tử / QR";
+        if (v === "CARD") return "Thẻ ngân hàng";
+        return "Thanh toán khi nhận hàng (COD)";
+    }
+    function shipLabel(v) {
+        return v === "FAST" ? "Giao nhanh (15 - 25 phút)" : "Giao tiêu chuẩn (30 - 45 phút)";
+    }
+
+    function renderInfo() {
+        document.getElementById("f-addressId").value = addressId;
+        document.getElementById("f-paymentMethod").value = paymentMethod;
+        document.getElementById("f-shippingMethod").value = shippingMethod;
+        document.getElementById("f-voucherCode").value = voucherCode;
+
+        document.getElementById("v-address").textContent = "Mã địa chỉ #" + addressId;
+        document.getElementById("v-payment").textContent = payLabel(paymentMethod);
+        document.getElementById("v-shipping").textContent = shipLabel(shippingMethod);
+        document.getElementById("v-voucher").textContent = voucherCode ? voucherCode : "Không áp dụng";
+
+        document.getElementById("sum-subtotal").textContent = formatMoney(subtotal);
+        document.getElementById("sum-discount").textContent = "-" + formatMoney(discount);
+        document.getElementById("sum-shipping").textContent = formatMoney(shippingFee);
+        document.getElementById("sum-total").textContent = formatMoney(total);
+
+        const backParams = new URLSearchParams({
+            foodId: String(foodId),
+            quantity: String(quantity)
+        });
+        document.getElementById("back-order-btn").href = "checkout.html?" + backParams.toString();
+    }
+
+    function renderItem(food) {
+        const wrap = document.getElementById("confirm-items");
+        wrap.innerHTML = `
+            <div class="item-row">
+                <img class="thumb" src="${food.image_url || 'images/food-placeholder.svg'}" onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
+                <div>
+                    <strong>${food.name || ""}</strong>
+                    <div style="color:var(--text-light);">Số lượng: ${quantity}</div>
+                </div>
+                <strong style="color:var(--primary);">${formatMoney(Number(food.price || 0) * quantity)}</strong>
+            </div>
+        `;
+    }
+
+    document.getElementById("confirm-form").addEventListener("submit", function (e) {
+        if (!foodId) return;
+        e.preventDefault();
+        fetch("CartServlet", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                action: "add",
+                foodId: String(foodId),
+                quantity: String(quantity)
+            }).toString()
+        }).then(() => this.submit()).catch(() => this.submit());
+    });
+
+    renderInfo();
+    if (foodId > 0) {
+        fetch(`FoodServlet?id=${foodId}`)
+            .then(r => r.json())
+            .then(renderItem)
+            .catch(() => {
+                document.getElementById("confirm-items").innerHTML = "<p>Không tải được thông tin món đã chọn.</p>";
+            });
+    } else {
+        document.getElementById("confirm-items").innerHTML = "<p>Đang dùng dữ liệu giỏ hàng hiện tại.</p>";
+    }
+</script>
+</body>
+</html>

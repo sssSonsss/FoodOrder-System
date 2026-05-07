@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OrderDAO {
+    private final NotificationDAO notificationDAO = new NotificationDAO();
 
     public int createOrderFromCart(int userId, int addressId) throws Exception {
         String sqlCart = "SELECT c.food_id, c.quantity, f.price "
@@ -55,7 +56,7 @@ public class OrderDAO {
                 try (PreparedStatement psOrder = conn.prepareStatement(sqlInsertOrder)) {
                     psOrder.setInt(1, userId);
                     psOrder.setDouble(2, total);
-                    psOrder.setString(3, "CHO_XAC_NHAN");
+                    psOrder.setInt(3, 0);
                     psOrder.setInt(4, addressId);
                     try (ResultSet rs = psOrder.executeQuery()) {
                         if (!rs.next()) {
@@ -76,7 +77,7 @@ public class OrderDAO {
                     psItem.executeBatch();
                 }
 
-                insertStatusLog(conn, orderId, "CHO_XAC_NHAN", "Đơn hàng vừa được tạo");
+                insertStatusLog(conn, orderId, 0, "Đơn hàng vừa được tạo");
 
                 try (PreparedStatement psDelete = conn.prepareStatement(sqlDeleteCart)) {
                     psDelete.setInt(1, userId);
@@ -84,6 +85,12 @@ public class OrderDAO {
                 }
 
                 conn.commit();
+                notificationDAO.createNotification(
+                    userId,
+                    "Đặt hàng thành công",
+                    "Đơn hàng #" + orderId + " đã được tạo và đang chờ xác nhận.",
+                    "ORDER"
+                );
                 return orderId;
             } catch (Exception e) {
                 conn.rollback();
@@ -114,7 +121,7 @@ public class OrderDAO {
 
             ps.setInt(1, userId);
             if (status != null && !status.trim().isEmpty()) {
-                ps.setString(2, status.trim());
+                ps.setInt(2, Integer.parseInt(status.trim()));
             }
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -153,7 +160,8 @@ public class OrderDAO {
     public List<OrderItem> getOrderItems(int orderId) {
         List<OrderItem> list = new ArrayList<>();
 
-        String sql = "SELECT oi.order_id, oi.food_id, oi.quantity, oi.price, f.name, f.image_url "
+        String sql = "SELECT oi.order_id, oi.food_id, oi.quantity, oi.price, f.name, "
+                   + "COALESCE(NULLIF(f.image_url, ''), 'images/food-placeholder.svg') AS image_url "
                    + "FROM order_items oi "
                    + "JOIN foods f ON oi.food_id = f.id "
                    + "WHERE oi.order_id = ?";
@@ -171,7 +179,7 @@ public class OrderDAO {
                         rs.getString("name"),
                         rs.getInt("quantity"),
                         rs.getDouble("price"),
-                        rs.getString("image_url")
+                        normalizeImage(rs.getString("image_url"))
                     ));
                 }
             }
@@ -182,25 +190,32 @@ public class OrderDAO {
         return list;
     }
 
+    private String normalizeImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return "images/food-placeholder.svg";
+        }
+        return imageUrl.trim();
+    }
+
     public boolean cancelOrder(int orderId, int userId) {
         String sqlCheck = "SELECT status FROM orders WHERE id = ? AND user_id = ?";
-        String sqlCancel = "UPDATE orders SET status = 'DA_HUY' WHERE id = ? AND user_id = ?";
+        String sqlCancel = "UPDATE orders SET status = 4 WHERE id = ? AND user_id = ?";
 
         try (Connection conn = DBConnection.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                String status = null;
+                Integer status = null;
                 try (PreparedStatement psCheck = conn.prepareStatement(sqlCheck)) {
                     psCheck.setInt(1, orderId);
                     psCheck.setInt(2, userId);
                     try (ResultSet rs = psCheck.executeQuery()) {
                         if (rs.next()) {
-                            status = rs.getString("status");
+                            status = rs.getInt("status");
                         }
                     }
                 }
 
-                if (status == null || (!"CHO_XAC_NHAN".equals(status) && !"DANG_CHUAN_BI".equals(status))) {
+                if (status == null || !(status == 0 || status == 1)) {
                     conn.rollback();
                     return false;
                 }
@@ -214,9 +229,15 @@ public class OrderDAO {
                     }
                 }
 
-                insertStatusLog(conn, orderId, "DA_HUY", "Người dùng đã hủy đơn");
+                insertStatusLog(conn, orderId, 4, "Người dùng đã hủy đơn");
 
                 conn.commit();
+                notificationDAO.createNotification(
+                    userId,
+                    "Đơn hàng đã hủy",
+                    "Đơn #" + orderId + " đã được hủy thành công.",
+                    "ORDER"
+                );
                 return true;
             } catch (Exception e) {
                 conn.rollback();
@@ -300,19 +321,19 @@ public class OrderDAO {
         try (Connection conn = DBConnection.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                String status = null;
+                Integer status = null;
                 try (PreparedStatement psCheck = conn.prepareStatement(sqlCheck)) {
                     psCheck.setInt(1, orderId);
                     psCheck.setInt(2, userId);
                     psCheck.setInt(3, foodId);
                     try (ResultSet rs = psCheck.executeQuery()) {
                         if (rs.next()) {
-                            status = rs.getString("status");
+                            status = rs.getInt("status");
                         }
                     }
                 }
 
-                if (!"DA_GIAO_THANH_CONG".equals(status)) {
+                if (status == null || status != 3) {
                     conn.rollback();
                     return false;
                 }
@@ -349,7 +370,7 @@ public class OrderDAO {
 
     public List<OrderStatusLog> getStatusLogs(int orderId) {
         List<OrderStatusLog> list = new ArrayList<>();
-        String sql = "SELECT id, order_id, status, note, TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') AS created_at "
+        String sql = "SELECT id, order_id, status, note, TO_CHAR(update_time, 'YYYY-MM-DD HH24:MI:SS') AS created_at "
                    + "FROM order_status_logs WHERE order_id = ? ORDER BY id ASC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -360,7 +381,7 @@ public class OrderDAO {
                     list.add(new OrderStatusLog(
                         rs.getInt("id"),
                         rs.getInt("order_id"),
-                        rs.getString("status"),
+                        rs.getInt("status"),
                         rs.getString("note"),
                         rs.getString("created_at")
                     ));
@@ -373,12 +394,12 @@ public class OrderDAO {
         return list;
     }
 
-    public void appendStatusLog(int orderId, String status, String note) {
+    public void appendStatusLog(int orderId, int status, String note) {
         String sql = "INSERT INTO order_status_logs (order_id, status, note) VALUES (?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, orderId);
-            ps.setString(2, status);
+            ps.setInt(2, status);
             ps.setString(3, note);
             ps.executeUpdate();
         } catch (Exception e) {
@@ -386,23 +407,40 @@ public class OrderDAO {
         }
     }
 
-    public void updateOrderStatus(int orderId, String status) {
+    public void updateOrderStatus(int orderId, int status) {
         String sql = "UPDATE orders SET status = ? WHERE id = ?";
+        String sqlUser = "SELECT user_id FROM orders WHERE id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, status);
+            ps.setInt(1, status);
             ps.setInt(2, orderId);
             ps.executeUpdate();
+
+            int userId = 0;
+            try (PreparedStatement psUser = conn.prepareStatement(sqlUser)) {
+                psUser.setInt(1, orderId);
+                try (ResultSet rs = psUser.executeQuery()) {
+                    if (rs.next()) userId = rs.getInt("user_id");
+                }
+            }
+            if (userId > 0) {
+                notificationDAO.createNotification(
+                    userId,
+                    "Cập nhật trạng thái đơn hàng",
+                    buildStatusNotificationMessage(orderId, status),
+                    "ORDER"
+                );
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void insertStatusLog(Connection conn, int orderId, String status, String note) throws Exception {
+    private void insertStatusLog(Connection conn, int orderId, int status, String note) throws Exception {
         String sql = "INSERT INTO order_status_logs (order_id, status, note) VALUES (?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.NO_GENERATED_KEYS)) {
             ps.setInt(1, orderId);
-            ps.setString(2, status);
+            ps.setInt(2, status);
             ps.setString(3, note);
             ps.executeUpdate();
         }
@@ -413,9 +451,73 @@ public class OrderDAO {
             rs.getInt("id"),
             rs.getInt("user_id"),
             rs.getDouble("total_price"),
-            rs.getString("status"),
+            rs.getInt("status"),
             rs.getInt("address_id"),
             rs.getString("created_at")
         );
+    }
+
+    public List<Order> getOrdersByStatus(int userId, int status) {
+        List<Order> list = new ArrayList<>();
+        String sql = "SELECT id, user_id, total_price, status, address_id, "
+                   + "TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') AS created_at "
+                   + "FROM orders WHERE user_id = ? AND status = ? ORDER BY id DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, status);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapOrder(rs));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public void updateOrderStatusForTrackingTest(int userId) {
+        String sql = "SELECT id, status, created_at FROM orders WHERE user_id = ? AND status BETWEEN 0 AND 2";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int orderId = rs.getInt("id");
+                    int current = rs.getInt("status");
+                    int next = current + 1;
+                    if (next <= 3) {
+                        updateOrderStatus(orderId, next);
+                        appendStatusLog(orderId, next, buildAutoNote(next));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String buildAutoNote(int status) {
+        switch (status) {
+            case 1: return "Đơn hàng đang được quán chuẩn bị";
+            case 2: return "Shipper đã lấy hàng và đang giao";
+            case 3: return "Đơn hàng đã hoàn thành";
+            case 4: return "Đơn hàng đã bị hủy";
+            default: return "Đơn hàng đang chờ xác nhận";
+        }
+    }
+
+    private String buildStatusNotificationMessage(int orderId, int status) {
+        switch (status) {
+            case 1:
+                return "Đơn #" + orderId + " đang được quán chuẩn bị.";
+            case 2:
+                return "Đơn #" + orderId + " đang trên đường giao đến bạn.";
+            case 3:
+                return "Đơn #" + orderId + " đã hoàn thành. Chúc bạn ngon miệng!";
+            case 4:
+                return "Đơn #" + orderId + " đã bị hủy. Bạn có thể đặt lại bất cứ lúc nào.";
+            default:
+                return "Đơn #" + orderId + " đang chờ xác nhận.";
+        }
     }
 }

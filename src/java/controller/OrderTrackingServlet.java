@@ -45,8 +45,8 @@ public class OrderTrackingServlet extends HttpServlet {
             return;
         }
 
-        String fakeRealtimeStatus = calculateStatusByElapsedTime(order.getCreatedAt(), order.getStatus());
-        if (!order.getStatus().equals(fakeRealtimeStatus) && !"DA_HUY".equals(order.getStatus())) {
+        int fakeRealtimeStatus = calculateStatusByElapsedTime(order.getCreatedAt(), order.getStatus());
+        if (order.getStatus() != fakeRealtimeStatus && order.getStatus() != 4) {
             orderDAO.updateOrderStatus(orderId, fakeRealtimeStatus);
             orderDAO.appendStatusLog(orderId, fakeRealtimeStatus, buildTrackingNote(fakeRealtimeStatus));
             order.setStatus(fakeRealtimeStatus);
@@ -58,8 +58,8 @@ public class OrderTrackingServlet extends HttpServlet {
         request.getRequestDispatcher("/order-tracking.jsp").forward(request, response);
     }
 
-    private String calculateStatusByElapsedTime(String createdAt, String currentStatus) {
-        if ("DA_HUY".equals(currentStatus) || "DA_GIAO_THANH_CONG".equals(currentStatus)) {
+    private int calculateStatusByElapsedTime(String createdAt, int currentStatus) {
+        if (currentStatus == 4 || currentStatus == 3) {
             return currentStatus;
         }
 
@@ -67,25 +67,22 @@ public class OrderTrackingServlet extends HttpServlet {
             LocalDateTime createdTime = LocalDateTime.parse(createdAt, DATE_TIME_FORMATTER);
             long minutes = Duration.between(createdTime, LocalDateTime.now()).toMinutes();
 
-            if (minutes < 2) return "CHO_XAC_NHAN";
-            if (minutes < 5) return "DANG_CHUAN_BI";
-            if (minutes < 8) return "SHIPPER_DA_LAY";
-            if (minutes < 12) return "DANG_GIAO";
-            return "DA_GIAO_THANH_CONG";
+            if (minutes < 2) return 0;
+            if (minutes < 5) return 1;
+            if (minutes < 12) return 2;
+            return 3;
         } catch (Exception ignored) {
             return currentStatus;
         }
     }
 
-    private String buildTrackingNote(String status) {
+    private String buildTrackingNote(int status) {
         switch (status) {
-            case "DANG_CHUAN_BI":
+            case 1:
                 return "Quán đã xác nhận và đang chuẩn bị món";
-            case "SHIPPER_DA_LAY":
-                return "Shipper đã lấy hàng tại quán";
-            case "DANG_GIAO":
+            case 2:
                 return "Đơn hàng đang trên đường giao đến bạn";
-            case "DA_GIAO_THANH_CONG":
+            case 3:
                 return "Giao hàng thành công, chúc bạn ngon miệng";
             default:
                 return "Đơn hàng đang chờ xác nhận";

@@ -53,7 +53,10 @@
             <h2>🍱 Danh sách món</h2>
             <% if (items != null) for (OrderItem item : items) { %>
                 <div class="item-row">
-                    <img class="thumb" src="<%= item.getImageUrl() == null ? "" : item.getImageUrl() %>" alt="Món ăn">
+                    <img class="thumb"
+                         src="<%= item.getImageUrl() == null ? "images/food-placeholder.svg" : item.getImageUrl() %>"
+                         alt="Món ăn"
+                         onerror="this.src='images/food-placeholder.svg'">
                     <div>
                         <strong><%= item.getFoodName() %></strong>
                         <p>Số lượng: <%= item.getQuantity() %></p>
