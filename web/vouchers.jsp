@@ -131,6 +131,9 @@
     function renderCard(v) {
         const card = document.createElement("div");
         card.className = "v-card" + (activeTab === "history" ? " history" : "");
+        if (activeTab === "history" && v.usageId != null) {
+            card.dataset.usageId = String(v.usageId);
+        }
 
         const head = document.createElement("div");
         head.className = "v-code";
@@ -261,7 +264,17 @@
                 }
                 empty.style.display = "none";
                 empty.textContent = "Không có dữ liệu hiển thị.";
-                list.forEach(v => grid.appendChild(renderCard(v)));
+                if (activeTab === "my") {
+                    const seen = new Set();
+                    list.forEach(v => {
+                        const id = Number(v.id);
+                        if (seen.has(id)) return;
+                        seen.add(id);
+                        grid.appendChild(renderCard(v));
+                    });
+                } else {
+                    list.forEach(v => grid.appendChild(renderCard(v)));
+                }
             })
             .catch(() => {
                 empty.style.display = "block";
@@ -288,6 +301,6 @@
     switchTab("offers");
 </script>
 <script src="js/auth-navbar.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

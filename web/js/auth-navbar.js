@@ -3,10 +3,11 @@
  * Dùng chung #navbar-icons với notification-widget.js
  */
 (function () {
+    /** Chỉ đóng menu tài khoản. Panel thông báo (.fo-notify-wrap) chỉ đóng bằng nút × (theo UX dự án). */
     window.closeFoodOrderNavDropdowns = window.closeFoodOrderNavDropdowns || function () {
-        document.querySelectorAll(".fo-dropdown-wrap.is-open").forEach(function (w) {
+        document.querySelectorAll(".fo-user-wrap.is-open").forEach(function (w) {
             w.classList.remove("is-open");
-            var b = w.querySelector(".fo-user-trigger, .fo-notify-trigger");
+            var b = w.querySelector(".fo-user-trigger");
             if (b) b.setAttribute("aria-expanded", "false");
         });
     };

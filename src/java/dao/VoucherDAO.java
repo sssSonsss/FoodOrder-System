@@ -8,7 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Truy vấn voucher, ví người dùng và lịch sử sử dụng (demo PostgreSQL).
@@ -81,15 +83,20 @@ public class VoucherDAO {
         return list;
     }
 
-    /** Voucher đã nhận vào ví, chưa dùng trong đơn (demo: hiển thị hết user_vouchers). */
+    /** Voucher đã nhận vào ví, chưa dùng trong đơn (mỗi mã một dòng — trùng DB do thiếu UNIQUE được gộp). */
     public List<Voucher> listMyWallet(int userId) {
         List<Voucher> list = new ArrayList<>();
-        String sql = BASE_SELECT
-                + ", TRUE AS claimed, TO_CHAR(uv.claimed_at, 'YYYY-MM-DD HH24:MI:SS') AS claimed_at "
+        String inner = "SELECT DISTINCT ON (uv.voucher_id) "
+                + "v.id, v.code, v.title, v.description, v.discount_type, "
+                + "v.discount_value::float8 AS discount_value, v.min_order_value::float8 AS min_order_value, "
+                + "v.max_discount_amount::float8 AS max_discount_amount, v.usage_limit, v.used_count, "
+                + "TO_CHAR(v.expiry_date, 'YYYY-MM-DD') AS expiry_date, v.is_active, v.promo_scope, "
+                + "TRUE AS claimed, TO_CHAR(uv.claimed_at, 'YYYY-MM-DD HH24:MI:SS') AS claimed_at "
                 + "FROM user_vouchers uv "
                 + "JOIN vouchers v ON v.id = uv.voucher_id "
                 + "WHERE uv.user_id = ? AND v.is_active = TRUE "
-                + "ORDER BY uv.claimed_at DESC";
+                + "ORDER BY uv.voucher_id, uv.claimed_at DESC NULLS LAST";
+        String sql = "SELECT * FROM (" + inner + ") wallet ORDER BY wallet.claimed_at DESC NULLS LAST";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -105,22 +112,28 @@ public class VoucherDAO {
             e.printStackTrace();
         }
 
-        if (list.isEmpty()) {
-            list.addAll(buildFakeWallet());
-        }
+        list = dedupeWalletByVoucherId(list);
         return list;
     }
 
-    /** Lịch sử đã áp dụng khi đặt hàng. */
+    private List<Voucher> dedupeWalletByVoucherId(List<Voucher> list) {
+        Map<Integer, Voucher> map = new LinkedHashMap<>();
+        for (Voucher v : list) {
+            map.putIfAbsent(v.getId(), v);
+        }
+        return new ArrayList<>(map.values());
+    }
+
+    /** Mọi lần dùng voucher (mỗi dòng voucher_usage — gồm dùng lại cùng mã sau khi nhận lại). */
     public List<Voucher> listUsedHistory(int userId) {
         List<Voucher> list = new ArrayList<>();
-        String sql = BASE_SELECT
+        String sql = "SELECT h.id AS usage_id, " + BASE_SELECT.substring(7)
                 + ", TO_CHAR(h.used_at, 'YYYY-MM-DD HH24:MI:SS') AS used_at, "
                 + "h.discount_amount::float8 AS saved_discount, h.order_id AS related_order_id "
                 + "FROM voucher_usage h "
                 + "JOIN vouchers v ON v.id = h.voucher_id "
                 + "WHERE h.user_id = ? "
-                + "ORDER BY h.used_at DESC";
+                + "ORDER BY h.used_at DESC NULLS LAST, h.id DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -128,6 +141,10 @@ public class VoucherDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Voucher v = mapVoucher(rs, false);
+                    int usageId = rs.getInt("usage_id");
+                    if (!rs.wasNull()) {
+                        v.setUsageRecordId(usageId);
+                    }
                     v.setUsedAt(rs.getString("used_at"));
                     v.setSavedDiscount(rs.getDouble("saved_discount"));
                     int oid = rs.getInt("related_order_id");
@@ -141,9 +158,6 @@ public class VoucherDAO {
             e.printStackTrace();
         }
 
-        if (list.isEmpty()) {
-            list.addAll(buildFakeHistory());
-        }
         return list;
     }
 
@@ -164,7 +178,17 @@ public class VoucherDAO {
             try (PreparedStatement ins = conn.prepareStatement(insertSql)) {
                 ins.setInt(1, userId);
                 ins.setInt(2, voucherId);
-                return ins.executeUpdate() > 0;
+                if (ins.executeUpdate() > 0) {
+                    return true;
+                }
+            }
+            try (PreparedStatement ex = conn.prepareStatement(
+                    "SELECT 1 FROM user_vouchers WHERE user_id = ? AND voucher_id = ?")) {
+                ex.setInt(1, userId);
+                ex.setInt(2, voucherId);
+                try (ResultSet rs = ex.executeQuery()) {
+                    return rs.next();
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -393,26 +417,4 @@ public class VoucherDAO {
         return list;
     }
 
-    private List<Voucher> buildFakeWallet() {
-        List<Voucher> list = new ArrayList<>();
-        Voucher v = new Voucher(201, "GIAM30K", "Giảm cố định 30k",
-                "Áp dụng đơn từ 100k.", "AMOUNT", 30000, 100000, null, null, 5,
-                "2099-12-31", true, "ALL");
-        v.setClaimed(true);
-        v.setClaimedAt("2026-05-08 10:00:00");
-        list.add(v);
-        return list;
-    }
-
-    private List<Voucher> buildFakeHistory() {
-        List<Voucher> list = new ArrayList<>();
-        Voucher v = new Voucher(301, "PHANTRAM10", "Giảm 10%",
-                "Đã dùng trong demo.", "PERCENT", 10, 0, 15000.0, null, 2,
-                "2099-12-31", true, "ALL");
-        v.setUsedAt("2026-05-07 18:30:00");
-        v.setSavedDiscount(12000);
-        v.setRelatedOrderId(8998);
-        list.add(v);
-        return list;
-    }
 }

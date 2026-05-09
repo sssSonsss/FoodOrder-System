@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đặt hàng - FoodOrder</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/order.css">
     <style>
         .select-wrap { max-width: 900px; margin: 0 auto; padding: 30px 5% 64px; }
         .panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px; }
-        .item { display:grid; grid-template-columns:84px 1fr auto; gap:12px; align-items:center; }
-        .thumb { width:84px; height:84px; border-radius:10px; object-fit:cover; border:1px solid var(--border); box-shadow:var(--shadow-sm); background:var(--border); }
-        .qty { display:flex; align-items:center; gap:8px; }
-        .qty button { width:34px; height:34px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+        .qty { display:flex; align-items:center; gap:8px; justify-content:center; }
+        .qty button { width:34px; height:34px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; }
         .qty span { min-width:30px; text-align:center; font-weight:700; }
     </style>
 </head>
@@ -35,7 +34,7 @@
     </div>
 
     <div class="panel">
-        <div class="item" id="order-item"></div>
+        <div id="order-item"></div>
         <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
             <div>
                 <div style="color:var(--text-light);font-size:.9rem;">Tạm tính</div>
@@ -63,17 +62,22 @@
         if (!currentFood) return;
         const wrap = document.getElementById("order-item");
         wrap.innerHTML = `
-            <img class="thumb" src="${currentFood.image_url || 'images/food-placeholder.svg'}"
-                 onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
-            <div>
-                <strong style="font-size:1.05rem;">${currentFood.name || ""}</strong>
-                <div style="color:var(--text-light);">${currentFood.description || ""}</div>
-                <div style="margin-top:6px;color:var(--primary);font-weight:700;">${formatMoney(currentFood.price)}</div>
-            </div>
-            <div class="qty">
-                <button onclick="changeQty(-1)">-</button>
-                <span id="qty">${quantity}</span>
-                <button onclick="changeQty(1)">+</button>
+            <div class="order-flow-item" style="margin-bottom:0;border:0;box-shadow:none;background:transparent;">
+                <img class="order-flow-item__img" style="height:200px;border-radius:12px;" src="${currentFood.image_url || 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg'}"
+                     onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'" alt="Món ăn">
+                <div class="order-flow-item__body" style="padding-left:0;padding-right:0;">
+                    <div class="order-flow-item__name">${currentFood.name || ""}</div>
+                    ${currentFood.description ? `<p class="order-flow-item__desc">${currentFood.description}</p>` : ""}
+                    <div class="order-flow-item__price">${formatMoney(currentFood.price)}</div>
+                    <div class="order-flow-item__row" style="margin-top:14px;">
+                        <span class="order-flow-item__meta">Số lượng</span>
+                        <div class="qty">
+                            <button type="button" onclick="changeQty(-1)">-</button>
+                            <span id="qty">${quantity}</span>
+                            <button type="button" onclick="changeQty(1)">+</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
         document.getElementById("subtotal").textContent = formatMoney(Number(currentFood.price) * quantity);
@@ -104,6 +108,6 @@
     }
 </script>
 <script src="js/auth-navbar.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

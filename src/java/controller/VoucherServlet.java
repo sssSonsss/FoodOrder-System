@@ -127,9 +127,9 @@ public class VoucherServlet extends HttpServlet {
         }
         boolean ok = voucherDAO.claimVoucher(userId, voucherId);
         if (ok) {
-            response.getWriter().print("{\"ok\":true,\"message\":\"Đã thêm voucher vào kho của bạn.\"}");
+            response.getWriter().print("{\"ok\":true,\"message\":\"Đã thêm vào ví (hoặc mã đã có sẵn trong ví).\"}");
         } else {
-            response.getWriter().print("{\"ok\":false,\"message\":\"Không nhận được voucher (đã có trong ví hoặc hết hạn).\"}");
+            response.getWriter().print("{\"ok\":false,\"message\":\"Không nhận được voucher (hết hạn hoặc không hợp lệ).\"}");
         }
     }
 
@@ -156,7 +156,8 @@ public class VoucherServlet extends HttpServlet {
             if ("history".equals(tab)) {
                 sb.append(",\"usedAt\":\"").append(escapeJson(v.getUsedAt())).append("\",")
                   .append("\"savedDiscount\":").append(v.getSavedDiscount()).append(",")
-                  .append("\"orderId\":").append(v.getRelatedOrderId() != null ? v.getRelatedOrderId() : "null");
+                  .append("\"orderId\":").append(v.getRelatedOrderId() != null ? v.getRelatedOrderId() : "null")
+                  .append(",\"usageId\":").append(v.getUsageRecordId() != null ? v.getUsageRecordId() : "null");
             }
             sb.append("}");
         }

@@ -4,6 +4,7 @@ import model.Order;
 import model.OrderItem;
 import model.OrderStatusLog;
 import utils.DBConnection;
+import utils.FoodImageUrls;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -211,7 +212,7 @@ public class OrderDAO {
         List<OrderItem> list = new ArrayList<>();
 
         String sql = "SELECT oi.order_id, oi.food_id, oi.quantity, oi.price, f.name, "
-                   + "COALESCE(NULLIF(f.image_url, ''), 'images/food-placeholder.svg') AS image_url "
+                   + "COALESCE(NULLIF(f.image_url, ''), '" + FoodImageUrls.DEFAULT + "') AS image_url "
                    + "FROM order_items oi "
                    + "JOIN foods f ON oi.food_id = f.id "
                    + "WHERE oi.order_id = ?";
@@ -241,10 +242,7 @@ public class OrderDAO {
     }
 
     private String normalizeImage(String imageUrl) {
-        if (imageUrl == null || imageUrl.trim().isEmpty()) {
-            return "images/food-placeholder.svg";
-        }
-        return imageUrl.trim();
+        return FoodImageUrls.orDefault(imageUrl);
     }
 
     public boolean cancelOrder(int orderId, int userId) {

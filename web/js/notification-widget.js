@@ -1,5 +1,15 @@
 /* Trung tâm thông báo — icon chuông + panel dropdown gắn navbar */
 (function () {
+    /** URL ảnh trực tiếp (HTTPS). Link trang HTML không dùng được làm src của <img>. */
+    var FOOD_IMG_BY_THEME = {
+        fallback: "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg",
+        drink: "https://upload.wikimedia.org/wikipedia/commons/1/18/Bubble_Tea.png",
+        banhmi: "https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg",
+        com: "https://upload.wikimedia.org/wikipedia/commons/8/8c/C%C6%A1m_t%E1%BA%A5m.jpg",
+        bunpho: "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg",
+        chay: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Vegetable_stir_fry_002.jpg/640px-Vegetable_stir_fry_002.jpg",
+        dessert: "https://upload.wikimedia.org/wikipedia/commons/4/48/Flan_Caramel.jpg"
+    };
     function ensureNavbarIcons(actions) {
         var el = document.getElementById("navbar-icons");
         if (!el) {
@@ -82,7 +92,7 @@
             id: 15,
             name: "Phở bò tái nạm gầu",
             category: "Bún & Phở",
-            image_url: "images/bunpho-placeholder.svg",
+            image_url: FOOD_IMG_BY_THEME.bunpho,
             price: 65000,
             discount: 20,
             description: "Ưu đãi giờ trưa cho món bán chạy nhất hôm nay."
@@ -91,7 +101,7 @@
             id: 1,
             name: "Trà sữa trân châu đen",
             category: "Đồ uống",
-            image_url: "images/trasua-placeholder.svg",
+            image_url: FOOD_IMG_BY_THEME.drink,
             price: 35000,
             discount: 15,
             description: "Mua kèm món chính để nhận giảm giá đồ uống."
@@ -100,7 +110,7 @@
             id: 7,
             name: "Bánh mì pate thịt",
             category: "Bánh mì",
-            image_url: "images/banhmi-placeholder.svg",
+            image_url: FOOD_IMG_BY_THEME.banhmi,
             price: 25000,
             discount: 10,
             description: "Combo ăn sáng nhanh, đang chạy trong khung giờ demo."
@@ -109,7 +119,7 @@
             id: 23,
             name: "Kem tươi matcha",
             category: "Tráng miệng",
-            image_url: "images/dessert-placeholder.svg",
+            image_url: FOOD_IMG_BY_THEME.dessert,
             price: 35000,
             discount: 18,
             description: "Món tráng miệng đang được đẩy banner khuyến mãi."
@@ -135,9 +145,9 @@
         window.__foNavUiBound = true;
         if (typeof window.closeFoodOrderNavDropdowns !== "function") {
             window.closeFoodOrderNavDropdowns = function () {
-                document.querySelectorAll(".fo-dropdown-wrap.is-open").forEach(function (w) {
+                document.querySelectorAll(".fo-user-wrap.is-open").forEach(function (w) {
                     w.classList.remove("is-open");
-                    var b = w.querySelector(".fo-user-trigger, .fo-notify-trigger");
+                    var b = w.querySelector(".fo-user-trigger");
                     if (b) b.setAttribute("aria-expanded", "false");
                 });
             };
@@ -176,9 +186,11 @@
         button.innerHTML = '<span class="fo-notify-icon">🔔</span><span class="fo-notify-badge" hidden>0</span>';
         button.addEventListener("click", function (e) {
             e.stopPropagation();
-            const opening = !wrap.classList.contains("is-open");
-            if (typeof window.closeFoodOrderNavDropdowns === "function") window.closeFoodOrderNavDropdowns();
-            if (opening) {
+            if (typeof window.closeFoodOrderNavDropdowns === "function") {
+                window.closeFoodOrderNavDropdowns();
+            }
+            /* Chỉ mở khi đang đóng; đóng panel chỉ bằng nút × (không toggle bằng chuông). */
+            if (!wrap.classList.contains("is-open")) {
                 wrap.classList.add("is-open");
                 button.setAttribute("aria-expanded", "true");
                 renderTabs();
@@ -201,9 +213,15 @@
                 '<div class="fo-notify-body" id="fo-notify-body"></div>' +
             '</div>';
 
-        panel.querySelector(".fo-notify-close").addEventListener("click", function () {
+        panel.querySelector(".fo-notify-close").addEventListener("click", function (e) {
+            e.stopPropagation();
             wrap.classList.remove("is-open");
             button.setAttribute("aria-expanded", "false");
+        });
+
+        /* Không bubble lên document — tránh bindGlobalNavUi / auth-navbar đóng panel khi đổi tab hoặc click trong sheet */
+        panel.addEventListener("click", function (e) {
+            e.stopPropagation();
         });
 
         wrap.appendChild(button);
@@ -289,7 +307,7 @@
             const discount = Number(promo.discount || 10);
             const newPrice = Math.max(0, Math.round(oldPrice * (100 - discount) / 100));
             return '<a class="fo-promo-banner" href="food-detail.html?id=' + Number(promo.id || 1) + '">' +
-                '<img src="' + escAttr(promo.image_url || "images/food-placeholder.svg") + '" alt="' + escAttr(promo.name) + '">' +
+                '<img src="' + escAttr(promo.image_url || FOOD_IMG_BY_THEME.fallback) + '" alt="' + escAttr(promo.name) + '">' +
                 '<span class="fo-promo-copy">' +
                     '<span class="fo-promo-badge">Giảm ' + discount + '%</span>' +
                     '<strong>' + esc(promo.name) + '</strong>' +
@@ -304,7 +322,7 @@
         document.querySelectorAll(".fo-promo-banner img").forEach(img => {
             img.onerror = function () {
                 img.onerror = null;
-                img.src = "images/food-placeholder.svg";
+                img.src = FOOD_IMG_BY_THEME.banhmi;
             };
         });
     }
@@ -416,13 +434,13 @@
 
     function imageByCategory(categoryName) {
         const name = String(categoryName || "");
-        if (name.includes("Đồ uống")) return "images/trasua-placeholder.svg";
-        if (name.includes("Bánh mì")) return "images/banhmi-placeholder.svg";
-        if (name.includes("Bún") || name.includes("Phở")) return "images/bunpho-placeholder.svg";
-        if (name.includes("Cơm")) return "images/com-placeholder.svg";
-        if (name.includes("Chay")) return "images/chay-placeholder.svg";
-        if (name.includes("Tráng")) return "images/dessert-placeholder.svg";
-        return "images/food-placeholder.svg";
+        if (name.includes("Đồ uống")) return FOOD_IMG_BY_THEME.drink;
+        if (name.includes("Bánh mì")) return FOOD_IMG_BY_THEME.banhmi;
+        if (name.includes("Bún") || name.includes("Phở")) return FOOD_IMG_BY_THEME.bunpho;
+        if (name.includes("Cơm")) return FOOD_IMG_BY_THEME.com;
+        if (name.includes("Chay")) return FOOD_IMG_BY_THEME.chay;
+        if (name.includes("Tráng")) return FOOD_IMG_BY_THEME.dessert;
+        return FOOD_IMG_BY_THEME.fallback;
     }
 
     function money(value) {

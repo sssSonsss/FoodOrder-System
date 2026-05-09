@@ -16,6 +16,7 @@ let activeRating = 0;
 let currentView = 'grid';
 let currentPage = 1;
 const PAGE_SIZE = 12;
+let loadFoodsSeq = 0;
 
 const CAT_EMOJI = {
     'Đồ uống': '🧋', 'Bánh mì': '🥖', 'Cơm': '🍚',
@@ -23,8 +24,50 @@ const CAT_EMOJI = {
 };
 
 function getCatEmoji(name) {
-    for (const k in CAT_EMOJI) { if (name && name.includes(k)) return CAT_EMOJI[k]; }
+    const t = (name || '').trim();
+    if (t && Object.prototype.hasOwnProperty.call(CAT_EMOJI, t)) return CAT_EMOJI[t];
+    const keys = Object.keys(CAT_EMOJI).sort((a, b) => b.length - a.length);
+    for (const k of keys) {
+        if (t.includes(k)) return CAT_EMOJI[k];
+    }
     return '🍽️';
+}
+
+/** Ẩn dòng danh mục khi tên món đã bắt đầu bằng tên danh mục (tránh lặp "Bánh mì"). */
+function shouldShowCategoryLine(categoryName, foodName) {
+    const c = (categoryName || '').trim();
+    const n = (foodName || '').trim();
+    if (!c) return false;
+    return !n.toLowerCase().startsWith(c.toLowerCase());
+}
+
+function dedupeFoodsById(arr) {
+    const seen = new Map();
+    for (const f of arr || []) {
+        if (!f || f.id == null) continue;
+        if (!seen.has(f.id)) seen.set(f.id, f);
+    }
+    return Array.from(seen.values());
+}
+
+/** Mỗi id và mỗi tên danh mục (không phân biệt hoa thường) chỉ hiển thị một lần. */
+function dedupeCategories(arr) {
+    const seenId = new Set();
+    const seenName = new Set();
+    const out = [];
+    for (const c of arr || []) {
+        if (!c) continue;
+        const id = Number(c.id);
+        if (!Number.isFinite(id)) continue;
+        const idKey = String(id);
+        if (seenId.has(idKey)) continue;
+        const nameKey = String(c.name || '').trim().toLowerCase();
+        if (nameKey && seenName.has(nameKey)) continue;
+        seenId.add(idKey);
+        if (nameKey) seenName.add(nameKey);
+        out.push(Object.assign({}, c, { id }));
+    }
+    return out;
 }
 
 // ===== INIT =====
@@ -32,6 +75,13 @@ window.addEventListener('DOMContentLoaded', function () {
     readUrlParams();
     loadCategories();
     loadFoods();
+    const si = document.getElementById('search-input');
+    if (si) {
+        si.addEventListener('input', handleSearchInput);
+        si.addEventListener('keyup', function (e) {
+            if (e.key === 'Enter') doSearch();
+        });
+    }
 });
 
 function readUrlParams() {
@@ -50,7 +100,10 @@ function readUrlParams() {
 function loadCategories() {
     fetch('CategoryServlet')
         .then(r => r.json())
-        .then(data => { categories = data; renderCatFilter(data); })
+        .then(data => {
+            categories = dedupeCategories(data);
+            renderCatFilter(categories);
+        })
         .catch(err => {
             console.error('CategoryServlet error:', err);
             const list = document.getElementById('cat-filter-list');
@@ -98,6 +151,7 @@ function selectCategory(catId) {
 // ===== LOAD FOODS =====
 function loadFoods() {
     renderFoodSkeleton();
+    const mySeq = ++loadFoodsSeq;
 
     const params = new URLSearchParams();
     if (activeSearch)   params.set('search',   activeSearch);
@@ -107,12 +161,15 @@ function loadFoods() {
     fetch('FoodServlet?' + params.toString())
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
-            allFoods = data;
-            filteredFoods = [...data];
+            if (mySeq !== loadFoodsSeq) return;
+            const list = dedupeFoodsById(Array.isArray(data) ? data : []);
+            allFoods = list;
+            filteredFoods = [...list];
             applyClientFilters();
             renderFoods();
         })
         .catch(err => {
+            if (mySeq !== loadFoodsSeq) return;
             console.error('FoodServlet error:', err);
             const grid = document.getElementById('food-grid');
             if (grid) {
@@ -261,6 +318,7 @@ function createFoodCard(f) {
     card.onclick = () => window.location.href = `food-detail.html?id=${f.id}`;
 
     const emoji = getCatEmoji(f.category_name);
+    const showCat = shouldShowCategoryLine(f.category_name, f.name);
 
     card.innerHTML = `
         <div class="food-card__img">
@@ -273,7 +331,7 @@ function createFoodCard(f) {
                 onclick="event.stopPropagation(); toggleFav(this, ${f.id})">🤍</button>
         </div>
         <div class="food-card__body">
-            <div class="food-card__cat">${escHtml(f.category_name || '')}</div>
+            ${showCat ? `<div class="food-card__cat">${escHtml(f.category_name || '')}</div>` : ''}
             <div class="food-card__name">${escHtml(f.name)}</div>
             <div class="food-card__desc">${escHtml(f.description || '')}</div>
             <div class="food-card__footer">

@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xác nhận đơn hàng - FoodOrder</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/order.css">
     <style>
         .confirm-wrap { max-width: 980px; margin: 0 auto; padding: 30px 5% 64px; }
         .confirm-grid { display:grid; grid-template-columns: 1.4fr .9fr; gap: 16px; }
         .panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-sm); padding:16px; }
-        .item-row { display:grid; grid-template-columns:64px 1fr auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border); }
-        .item-row:last-child { border-bottom:none; }
-        .thumb { width:64px; height:64px; border-radius:10px; object-fit:cover; border:1px solid var(--border); box-shadow:var(--shadow-sm); background:var(--border); }
         .sum-row { display:flex; justify-content:space-between; margin-bottom:8px; }
         .info-line { margin-bottom:8px; }
         @media (max-width: 900px) { .confirm-grid { grid-template-columns:1fr; } }
@@ -150,13 +148,13 @@
     function renderItem(food) {
         const wrap = document.getElementById("confirm-items");
         wrap.innerHTML = `
-            <div class="item-row">
-                <img class="thumb" src="${food.image_url || 'images/food-placeholder.svg'}" onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
-                <div>
-                    <strong>${food.name || ""}</strong>
-                    <div style="color:var(--text-light);">Số lượng: ${quantity}</div>
+            <div class="order-flow-item">
+                <img class="order-flow-item__img" src="${food.image_url || 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg'}" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'" alt="Món ăn">
+                <div class="order-flow-item__body">
+                    <div class="order-flow-item__name">${food.name || ""}</div>
+                    <p class="order-flow-item__meta">Số lượng: ${quantity} · ${formatMoney(Number(food.price || 0))} / món</p>
+                    <div class="order-flow-item__price">${formatMoney(Number(food.price || 0) * quantity)}</div>
                 </div>
-                <strong style="color:var(--primary);">${formatMoney(Number(food.price || 0) * quantity)}</strong>
             </div>
         `;
     }
@@ -172,14 +170,14 @@
             const qn = Number(it.quantity || 1);
             const price = Number(it.price || 0);
             const row = document.createElement("div");
-            row.className = "item-row";
+            row.className = "order-flow-item";
             row.innerHTML = `
-                <img class="thumb" src="${it.image || "images/food-placeholder.svg"}" onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
-                <div>
-                    <strong>${it.food_name || ""}</strong>
-                    <div style="color:var(--text-light);">Số lượng: ${qn}</div>
+                <img class="order-flow-item__img" src="${it.image || "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg"}" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'" alt="Món ăn">
+                <div class="order-flow-item__body">
+                    <div class="order-flow-item__name">${it.food_name || ""}</div>
+                    <p class="order-flow-item__meta">Số lượng: ${qn} · ${formatMoney(price)} / món</p>
+                    <div class="order-flow-item__price">${formatMoney(price * qn)}</div>
                 </div>
-                <strong style="color:var(--primary);">${formatMoney(price * qn)}</strong>
             `;
             wrap.appendChild(row);
         });
@@ -225,6 +223,6 @@
     }
 </script>
 <script src="js/auth-navbar.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

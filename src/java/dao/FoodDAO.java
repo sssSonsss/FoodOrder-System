@@ -2,6 +2,7 @@ package dao;
 
 import model.Food;
 import utils.DBConnection;
+import utils.FoodImageUrls;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -36,10 +37,12 @@ public class FoodDAO {
 
         List<Object> params = new ArrayList<>();
 
-        // Filter: tìm kiếm theo tên
+        // Filter: tìm kiếm theo tên hoặc mô tả (tiếng Việt qua ILIKE)
         if (search != null && !search.trim().isEmpty()) {
-            sql.append("AND f.name ILIKE ? ");
-            params.add("%" + search.trim() + "%");
+            String q = "%" + search.trim() + "%";
+            sql.append("AND (f.name ILIKE ? OR f.description ILIKE ?) ");
+            params.add(q);
+            params.add(q);
         }
 
         // Filter: lọc theo danh mục
@@ -165,7 +168,7 @@ public class FoodDAO {
             rs.getString("name"),
             rs.getString("description"),
             rs.getDouble("price"),
-            rs.getString("image_url"),
+            FoodImageUrls.orDefault(rs.getString("image_url")),
             rs.getBoolean("is_active"),
             rs.getString("created_at"),
             rs.getDouble("rating"),

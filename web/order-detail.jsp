@@ -56,17 +56,15 @@
         <div class="order-card order-items">
             <h2>🍱 Danh sách món</h2>
             <% if (items != null) for (OrderItem item : items) { %>
-                <div class="item-row">
-                    <img class="thumb"
-                         src="<%= item.getImageUrl() == null ? "images/food-placeholder.svg" : item.getImageUrl() %>"
+                <div class="order-flow-item">
+                    <img class="order-flow-item__img"
+                         src="<%= item.getImageUrl() == null ? "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg" : item.getImageUrl() %>"
                          alt="Món ăn"
-                         onerror="this.src='images/food-placeholder.svg'">
-                    <div>
-                        <strong><%= item.getFoodName() %></strong>
-                        <p>Số lượng: <%= item.getQuantity() %></p>
-                    </div>
-                    <div style="font-weight:700;color:var(--primary);">
-                        <%= String.format("%,.0fđ", item.getPrice() * item.getQuantity()) %>
+                         onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'">
+                    <div class="order-flow-item__body">
+                        <div class="order-flow-item__name"><%= item.getFoodName() %></div>
+                        <p class="order-flow-item__meta">Số lượng: <%= item.getQuantity() %> · <%= String.format("%,.0fđ", item.getPrice()) %> / món</p>
+                        <div class="order-flow-item__price"><%= String.format("%,.0fđ", item.getPrice() * item.getQuantity()) %></div>
                     </div>
                 </div>
                 <% if (order.getStatus() == 3) { %>
@@ -96,6 +94,6 @@
     <% } %>
 </section>
 <script src="js/order.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

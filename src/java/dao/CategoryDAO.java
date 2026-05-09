@@ -2,6 +2,7 @@ package dao;
 
 import model.Category;
 import utils.DBConnection;
+import utils.FoodImageUrls;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -21,13 +22,14 @@ public class CategoryDAO {
 
         List<Category> list = new ArrayList<>();
 
-        String sql = "SELECT c.id, c.name, c.description, c.image_url, c.is_active, "
-                   + "COUNT(f.id) as item_count "
+        // Một dòng / danh mục; đếm món bằng subquery (tránh nhân bản hàng khi JOIN).
+        // DISTINCT ON: nếu DB có trùng tên danh mục (id khác nhau), chỉ giữ id nhỏ nhất.
+        String sql = "SELECT DISTINCT ON (LOWER(TRIM(c.name))) "
+                   + "c.id, c.name, c.description, c.image_url, c.is_active, "
+                   + "(SELECT COUNT(*)::int FROM foods f WHERE f.category_id = c.id AND f.is_active = true) AS item_count "
                    + "FROM categories c "
-                   + "LEFT JOIN foods f ON c.id = f.category_id AND f.is_active = true "
                    + "WHERE c.is_active = true "
-                   + "GROUP BY c.id, c.name, c.description, c.image_url, c.is_active "
-                   + "ORDER BY c.name";
+                   + "ORDER BY LOWER(TRIM(c.name)), c.id";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -49,11 +51,9 @@ public class CategoryDAO {
     public Category getCategoryById(int id) {
 
         String sql = "SELECT c.id, c.name, c.description, c.image_url, c.is_active, "
-                   + "COUNT(f.id) as item_count "
+                   + "(SELECT COUNT(*)::int FROM foods f WHERE f.category_id = c.id AND f.is_active = true) AS item_count "
                    + "FROM categories c "
-                   + "LEFT JOIN foods f ON c.id = f.category_id AND f.is_active = true "
-                   + "WHERE c.id = ? AND c.is_active = true "
-                   + "GROUP BY c.id, c.name, c.description, c.image_url, c.is_active";
+                   + "WHERE c.id = ? AND c.is_active = true";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -79,7 +79,7 @@ public class CategoryDAO {
             rs.getInt("id"),
             rs.getString("name"),
             rs.getString("description"),
-            rs.getString("image_url"),
+            FoodImageUrls.orDefault(rs.getString("image_url")),
             rs.getBoolean("is_active"),
             rs.getInt("item_count")
         );

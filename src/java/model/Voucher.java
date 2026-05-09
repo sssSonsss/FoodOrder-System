@@ -28,6 +28,8 @@ public class Voucher {
     private String usedAt;
     private double savedDiscount;
     private Integer relatedOrderId;
+    /** Khóa dòng voucher_usage (tab lịch sử — có thể nhiều lần dùng cùng mã). */
+    private Integer usageRecordId;
 
     public Voucher() {
     }
@@ -193,5 +195,13 @@ public class Voucher {
 
     public void setRelatedOrderId(Integer relatedOrderId) {
         this.relatedOrderId = relatedOrderId;
+    }
+
+    public Integer getUsageRecordId() {
+        return usageRecordId;
+    }
+
+    public void setUsageRecordId(Integer usageRecordId) {
+        this.usageRecordId = usageRecordId;
     }
 }

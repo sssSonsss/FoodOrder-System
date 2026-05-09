@@ -2,6 +2,7 @@ package dao;
 
 import model.CartItem;
 import utils.DBConnection;
+import utils.FoodImageUrls;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -30,7 +31,7 @@ public class CartDAO {
                         rs.getString("name"),
                         rs.getDouble("price"),
                         rs.getInt("quantity"),
-                        rs.getString("image_url")
+                        FoodImageUrls.orDefault(rs.getString("image_url"))
                     ));
                 }
             }

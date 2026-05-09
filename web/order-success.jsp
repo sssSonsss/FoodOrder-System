@@ -37,6 +37,6 @@
         <% } %>
     </div>
 </section>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

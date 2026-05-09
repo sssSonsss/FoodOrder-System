@@ -170,39 +170,24 @@ ALTER TABLE orders ALTER COLUMN status SET DEFAULT 0;
 
 ALTER TABLE order_status_logs ADD COLUMN IF NOT EXISTS update_time TIMESTAMP DEFAULT NOW();
 
--- Dùng ảnh placeholder theo nhóm món để tránh lỗi 404 và đảm bảo dữ liệu demo luôn hiển thị
-UPDATE foods
-SET image_url = CASE
-    WHEN category_id = 1 THEN 'images/trasua-placeholder.svg'
-    WHEN category_id = 2 THEN 'images/banhmi-placeholder.svg'
-    WHEN category_id = 3 THEN 'images/com-placeholder.svg'
-    WHEN category_id = 4 THEN 'images/bunpho-placeholder.svg'
-    WHEN category_id = 5 THEN 'images/chay-placeholder.svg'
-    WHEN category_id = 6 THEN 'images/dessert-placeholder.svg'
-    ELSE 'images/food-placeholder.svg'
-END;
-
--- Nguồn tham khảo hình ảnh theo nhóm món (dùng để mô tả ý tưởng ảnh fake trong demo):
--- Hamburger: http://www.maki.vn/tips/9-bi-quyet-chup-anh-mon-an-dep-chuyen-nghiep-nghe-thuat
--- Bánh mì: https://www.tripadvisor.com.vn/Restaurant_Review-g293925-d17757797-Reviews-Banh_Mi_362-Ho_Chi_Minh_City.html
--- Trà sữa: https://simexcodl.com.vn/tra-sua-ca-phe/
--- Nước ép bơ: https://www.dienmayxanh.com/vao-bep/cach-lam-sinh-to-bo-ngon-beo-ngot-dung-vi-00562
--- Cơm: https://lalago.vn/com-tam-hoi-an/
--- Đồ chay: https://fptshop.com.vn/tin-tuc/dien-may/quan-chay-quan-8-167167
--- Bún phở: https://thanhnien.vn/9-quan-bun-pho-khong-the-bo-qua-o-ha-noi-trong-danh-sach-michelin-185250224152555628.htm
--- Tráng miệng: https://ezcloud.vn/dessert-la-gi.html
-
+-- Ảnh món trong DB phải là URL ảnh trực tiếp (https://...jpg|png), không dùng link trang HTML làm src của <img>.
+-- Tham khảo chủ đề (bài báo / trang giới thiệu — không phải file ảnh):
+--   Bánh mì: https://www.tripadvisor.com.vn/Restaurant_Review-g293925-d17757797-Reviews-Banh_Mi_362-Ho_Chi_Minh_City.html
+--   Bún phở: https://thanhnien.vn/9-quan-bun-pho-khong-the-bo-qua-o-ha-noi-trong-danh-sach-michelin-185250224152555628.htm
+--   Cơm:     https://lalago.vn/com-tam-hoi-an/
+--   Đồ chay: https://fptshop.com.vn/tin-tuc/dien-may/quan-chay-quan-8-167167
+--   Trà sữa / đồ uống: https://simexcodl.com.vn/tra-sua-ca-phe/
 
 -- ==================================================
--- DATA MẪU: DANH MỤC
+-- DATA MẪU: DANH MỤC (ảnh HTTPS minh họa — hiển thị được mọi trang)
 -- ==================================================
 INSERT INTO categories (name, description, image_url) VALUES
-('Đồ uống',    'Trà sữa, cà phê, sinh tố và các loại nước giải khát',   'images/cat_drink.jpg'),
-('Bánh mì',    'Bánh mì Việt Nam đa dạng nhân thơm ngon',                'images/cat_banhmi.jpg'),
-('Cơm',        'Cơm văn phòng, cơm tấm, cơm gà các loại',                'images/cat_com.jpg'),
-('Bún & Phở',  'Phở bò, bún bò Huế, bún riêu và các loại bún nước',      'images/cat_pho.jpg'),
-('Chay',       'Món ăn thuần chay, tốt cho sức khỏe',                     'images/cat_chay.jpg'),
-('Tráng miệng','Chè, kem, bánh ngọt và các món tráng miệng hấp dẫn',     'images/cat_dessert.jpg');
+('Đồ uống',    'Trà sữa, cà phê, sinh tố và các loại nước giải khát',   'https://upload.wikimedia.org/wikipedia/commons/1/18/Bubble_Tea.png'),
+('Bánh mì',    'Bánh mì Việt Nam đa dạng nhân thơm ngon',                'https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'),
+('Cơm',        'Cơm văn phòng, cơm tấm, cơm gà các loại',                'https://upload.wikimedia.org/wikipedia/commons/8/8c/C%C6%A1m_t%E1%BA%A5m.jpg'),
+('Bún & Phở',  'Phở bò, bún bò Huế, bún riêu và các loại bún nước',      'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg'),
+('Chay',       'Món ăn thuần chay, tốt cho sức khỏe',                     'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Vegetable_stir_fry_002.jpg/640px-Vegetable_stir_fry_002.jpg'),
+('Tráng miệng','Chè, kem, bánh ngọt và các món tráng miệng hấp dẫn',     'https://upload.wikimedia.org/wikipedia/commons/4/48/Flan_Caramel.jpg');
 
 
 -- ==================================================
@@ -326,6 +311,27 @@ INSERT INTO foods (category_id, name, description, price, image_url, rating, rev
    'Chè thái rực rỡ với thạch, trái cây nhiệt đới, nước cốt dừa và đá bào.',
    30000, 'images/chethai.jpg', 4.7, 276);
 
+-- Gán lại ảnh món sau INSERT (đường images/*.jpg trong repo có thể không tồn tại khi deploy)
+UPDATE foods SET image_url = CASE category_id
+    WHEN 1 THEN 'https://upload.wikimedia.org/wikipedia/commons/1/18/Bubble_Tea.png'
+    WHEN 2 THEN 'https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'
+    WHEN 3 THEN 'https://upload.wikimedia.org/wikipedia/commons/8/8c/C%C6%A1m_t%E1%BA%A5m.jpg'
+    WHEN 4 THEN 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg'
+    WHEN 5 THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Vegetable_stir_fry_002.jpg/640px-Vegetable_stir_fry_002.jpg'
+    WHEN 6 THEN 'https://upload.wikimedia.org/wikipedia/commons/4/48/Flan_Caramel.jpg'
+    ELSE image_url
+END;
+
+UPDATE categories SET image_url = CASE name
+    WHEN 'Đồ uống' THEN 'https://upload.wikimedia.org/wikipedia/commons/1/18/Bubble_Tea.png'
+    WHEN 'Bánh mì' THEN 'https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'
+    WHEN 'Cơm' THEN 'https://upload.wikimedia.org/wikipedia/commons/8/8c/C%C6%A1m_t%E1%BA%A5m.jpg'
+    WHEN 'Bún & Phở' THEN 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg'
+    WHEN 'Chay' THEN 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Vegetable_stir_fry_002.jpg/640px-Vegetable_stir_fry_002.jpg'
+    WHEN 'Tráng miệng' THEN 'https://upload.wikimedia.org/wikipedia/commons/4/48/Flan_Caramel.jpg'
+    ELSE image_url
+END;
+
 
 -- ==================================================
 -- KIỂM TRA DỮ LIỆU
@@ -375,6 +381,10 @@ CREATE TABLE IF NOT EXISTS user_vouchers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_vouchers_user ON user_vouchers(user_id);
+
+-- Nếu DB cũ từng tạo user_vouchers không UNIQUE: chạy một lần để gỡ trùng trước khi thêm ràng buộc.
+-- DELETE FROM user_vouchers a USING user_vouchers b
+-- WHERE a.user_id = b.user_id AND a.voucher_id = b.voucher_id AND a.id > b.id;
 
 CREATE TABLE IF NOT EXISTS voucher_usage (
     id               SERIAL PRIMARY KEY,

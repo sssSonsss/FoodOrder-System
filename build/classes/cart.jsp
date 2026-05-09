@@ -149,7 +149,7 @@
                         data-cart-item-id="<%= item.getId() %>"
                         data-unit-price="<%= item.getPrice() %>">
                         <td><input type="checkbox" class="item-check" checked onchange="updateSelectedTotal()"></td>
-                        <td><img class="cart-thumb" src="<%= item.getImage() == null ? "images/food-placeholder.svg" : item.getImage() %>" alt="Món ăn" onerror="this.src='images/food-placeholder.svg'"></td>
+                        <td><img class="cart-thumb" src="<%= item.getImage() == null ? "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg" : item.getImage() %>" alt="Món ăn" onerror="this.onerror=null;this.src='https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg'"></td>
                         <td>
                             <strong><%= item.getFoodName() %></strong>
                             <div style="color:var(--text-light);font-size:.86rem;">Mã món: #<%= item.getFoodId() %></div>
@@ -508,7 +508,7 @@ function loadSaleSuggestions() {
                 const newPrice = Math.max(0, oldPrice * (100 - salePercent) / 100);
                 const card = document.createElement("div");
                 card.className = "sale-card";
-                const imageUrl = escapeHtml(food.image_url || "images/food-placeholder.svg");
+                const imageUrl = escapeHtml(food.image_url || "https://upload.wikimedia.org/wikipedia/commons/6/6d/Ph%E1%BB%9F_b%C3%B2.jpg");
                 const foodName = escapeHtml(food.name || "");
                 const fid = Number(food.id || 0);
                 card.innerHTML =
@@ -538,7 +538,7 @@ function loadSaleSuggestions() {
                 });
                 card.querySelector(".btn-sale-quick").addEventListener("click", goQuick);
                 const img = card.querySelector(".sale-img");
-                if (img) img.onerror = () => { img.src = "images/food-placeholder.svg"; };
+                if (img) img.onerror = () => { img.onerror = null; img.src = "https://upload.wikimedia.org/wikipedia/commons/5/5f/B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng_in_Saigon.jpg"; };
                 grid.appendChild(card);
             });
         })
@@ -573,6 +573,6 @@ loadSaleSuggestions();
 </script>
 <div class="toast" id="toast"></div>
 <script src="js/auth-navbar.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>

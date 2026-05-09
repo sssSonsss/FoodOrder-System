@@ -19,6 +19,25 @@ function getCatEmoji(name) {
     return '🍽️';
 }
 
+function dedupeCategories(arr) {
+    const seenId = new Set();
+    const seenName = new Set();
+    const out = [];
+    for (const c of arr || []) {
+        if (!c) continue;
+        const id = Number(c.id);
+        if (!Number.isFinite(id)) continue;
+        const idKey = String(id);
+        if (seenId.has(idKey)) continue;
+        const nameKey = String(c.name || '').trim().toLowerCase();
+        if (nameKey && seenName.has(nameKey)) continue;
+        seenId.add(idKey);
+        if (nameKey) seenName.add(nameKey);
+        out.push(Object.assign({}, c, { id }));
+    }
+    return out;
+}
+
 
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', function () {
@@ -36,7 +55,7 @@ function loadCategories() {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
         })
-        .then(data => renderCategories(data))
+        .then(data => renderCategories(dedupeCategories(data)))
         .catch(err => {
             console.error('CategoryServlet error:', err);
             const grid = document.getElementById('category-grid');

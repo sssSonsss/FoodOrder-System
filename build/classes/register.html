@@ -1,25 +1,13 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="auth-root">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Đăng ký - FoodOrder</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        .auth-wrap { max-width: 520px; margin: 36px auto; padding: 0 5% 64px; }
-        .auth-card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm); padding:22px; }
-        .auth-card h1 { font-size:1.35rem; margin-bottom:8px; }
-        .auth-card label { display:block; font-weight:600; margin:12px 0 6px; font-size:.92rem; }
-        .auth-card input { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box; }
-        .auth-actions { margin-top:18px; display:flex; gap:10px; flex-wrap:wrap; }
-        .auth-error { background:#fdeceb; color:#991b1b; padding:10px 12px; border-radius:10px; font-size:.9rem; margin-bottom:12px; display:none; }
-        .auth-error.show { display:block; }
-        .auth-section { margin-top:18px; padding-top:14px; border-top:1px dashed var(--border); }
-        .auth-section h2 { font-size:1rem; margin-bottom:8px; }
-        .hint { font-size:.82rem; color:var(--text-light); margin-top:4px; }
-    </style>
+    <link rel="stylesheet" href="css/auth.css">
 </head>
-<body>
+<body class="auth-page-body">
 <nav class="navbar">
     <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
     <ul class="navbar-nav">
@@ -31,13 +19,13 @@
     </div>
 </nav>
 
-<section class="auth-wrap">
+<section class="auth-wrap auth-wrap--wide">
     <div class="auth-card">
         <h1>Đăng ký tài khoản</h1>
-        <p style="margin:0;color:var(--text-light);font-size:.94rem;">Kèm địa chỉ nhận hàng để đặt món nhanh hơn ở các lần sau.</p>
+        <p class="auth-lead">Kèm địa chỉ nhận hàng để đặt món nhanh hơn ở các lần sau.</p>
         <div id="auth-error" class="auth-error"></div>
 
-        <form method="post" action="AuthServlet">
+        <form class="auth-form" method="post" action="AuthServlet">
             <input type="hidden" name="action" value="register">
             <input type="hidden" name="redirect" id="redirect" value="/index.html">
             <input type="hidden" name="latitude" id="latitude" value="">
@@ -78,8 +66,8 @@
                 <label for="province">Tỉnh / Thành phố</label>
                 <input id="province" name="province" placeholder="VD: TP.Hồ Chí Minh">
 
-                <button type="button" class="btn btn-outline" style="margin-top:12px;" id="btn-geo">📍 Lấy vị trí hiện tại (GPS)</button>
-                <p class="hint">GPS chỉ để lưu kèm đơn hàng (demo). Bạn vẫn cần nhập địa chỉ chữ.</p>
+                <button type="button" class="btn btn-outline" style="margin-top:16px;" id="btn-geo">📍 Lấy vị trí hiện tại (GPS)</button>
+                <p class="auth-hint">GPS chỉ để lưu kèm đơn hàng (demo). Bạn vẫn cần nhập địa chỉ chữ.</p>
             </div>
 
             <div class="auth-actions">
@@ -125,6 +113,6 @@
     })();
 </script>
 <script src="js/auth-navbar.js"></script>
-<script src="js/notification-widget.js"></script>
+<script src="js/notification-widget.js?v=3"></script>
 </body>
 </html>
