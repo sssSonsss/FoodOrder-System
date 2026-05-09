@@ -35,6 +35,59 @@ CREATE TABLE IF NOT EXISTS foods (
     review_count INT DEFAULT 0
 );
 
+-- ==================================================
+-- NGƯỜI DÙNG & ĐỊA CHỈ GIAO HÀNG (đăng nhập / đăng ký)
+-- ==================================================
+CREATE TABLE IF NOT EXISTS users (
+    id              SERIAL PRIMARY KEY,
+    username        VARCHAR(80) NOT NULL UNIQUE,
+    email           VARCHAR(150) NOT NULL UNIQUE,
+    password_hash   VARCHAR(255) NOT NULL,
+    full_name       VARCHAR(120) NOT NULL,
+    phone           VARCHAR(30),
+    created_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_addresses (
+    id              SERIAL PRIMARY KEY,
+    user_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label           VARCHAR(80),
+    recipient_name  VARCHAR(120),
+    phone           VARCHAR(30),
+    address_line    VARCHAR(500) NOT NULL,
+    province        VARCHAR(120),
+    district        VARCHAR(120),
+    latitude        DOUBLE PRECISION,
+    longitude       DOUBLE PRECISION,
+    is_default      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user ON user_addresses(user_id);
+
+-- Nâng cấp DB cũ: thêm cột đăng nhập trước khi seed / INSERT dùng username
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(80);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+UPDATE users SET password_hash = TRIM(password)
+WHERE password_hash IS NULL
+  AND password IS NOT NULL
+  AND TRIM(password) LIKE '%$%';
+UPDATE users SET username = COALESCE(NULLIF(TRIM(username), ''), 'user_' || id::text);
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (LOWER(username));
+UPDATE users SET username = 'demo',
+    email = COALESCE(NULLIF(TRIM(email), ''), 'demo@foodorder.local'),
+    password_hash = COALESCE(NULLIF(TRIM(password_hash), ''),
+        'RcTBa42mEa3BJX1XQTqcgw==$Qf7ZAV+vEQlCisqIQYcVcwOMgvj3hFtaqdoFyrzEnzc='),
+    full_name = COALESCE(NULLIF(TRIM(full_name), ''), 'Người dùng demo'),
+    phone = COALESCE(NULLIF(TRIM(phone), ''), '0900000001')
+WHERE id = 1;
+INSERT INTO user_addresses (user_id, label, recipient_name, phone, address_line, province, district, is_default)
+SELECT u.id, 'Nhà', COALESCE(NULLIF(TRIM(u.full_name), ''), 'Khách'), COALESCE(NULLIF(TRIM(u.phone), ''), '0900000001'),
+       '123 Đường Demo, Phường Bến Nghé', 'TP.Hồ Chí Minh', 'Quận 1', TRUE
+FROM users u WHERE u.id = 1
+AND NOT EXISTS (SELECT 1 FROM user_addresses ua WHERE ua.user_id = u.id);
+
 CREATE TABLE IF NOT EXISTS cart_items (
     id           SERIAL PRIMARY KEY,
     user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -291,3 +344,268 @@ SELECT
 FROM foods f
 JOIN categories c ON f.category_id = c.id
 ORDER BY f.id;
+
+
+-- ==================================================
+-- MODULE VOUCHER (mã giảm giá, ví người dùng, lịch sử dùng)
+-- ==================================================
+CREATE TABLE IF NOT EXISTS vouchers (
+    id              SERIAL PRIMARY KEY,
+    code            VARCHAR(50) NOT NULL UNIQUE,
+    title           VARCHAR(150) NOT NULL,
+    description     VARCHAR(500),
+    discount_type   VARCHAR(20) NOT NULL CHECK (discount_type IN ('PERCENT','AMOUNT','FREESHIP')),
+    discount_value  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    min_order_value NUMERIC(12,0) NOT NULL DEFAULT 0,
+    max_discount_amount NUMERIC(12,0),
+    usage_limit     INT,
+    used_count      INT NOT NULL DEFAULT 0,
+    expiry_date     DATE NOT NULL,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMP DEFAULT NOW(),
+    promo_scope     VARCHAR(30) DEFAULT 'ALL'
+);
+
+CREATE TABLE IF NOT EXISTS user_vouchers (
+    id           SERIAL PRIMARY KEY,
+    user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    voucher_id   INT NOT NULL REFERENCES vouchers(id) ON DELETE CASCADE,
+    claimed_at   TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, voucher_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_vouchers_user ON user_vouchers(user_id);
+
+CREATE TABLE IF NOT EXISTS voucher_usage (
+    id               SERIAL PRIMARY KEY,
+    user_id          INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    voucher_id       INT NOT NULL REFERENCES vouchers(id),
+    order_id         INT REFERENCES orders(id) ON DELETE SET NULL,
+    discount_amount  NUMERIC(12,0) NOT NULL DEFAULT 0,
+    used_at          TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_voucher_usage_user ON voucher_usage(user_id);
+
+-- Dữ liệu mẫu (chạy lại an toàn nhờ ON CONFLICT)
+INSERT INTO vouchers (code, title, description, discount_type, discount_value, min_order_value,
+                      max_discount_amount, usage_limit, expiry_date, is_active, promo_scope)
+VALUES
+('NEWUSER', 'Chào thành viên mới', 'Giảm phần trăm cho đơn từ 50k (demo).', 'PERCENT', 20, 50000, 40000, NULL, '2099-12-31', TRUE, 'FOOD'),
+('FREESHIP', 'Miễn phí ship', 'Freeship một lần khi đơn đạt ngưỡng tối thiểu.', 'FREESHIP', 0, 80000, NULL, NULL, '2099-12-31', TRUE, 'SHIP'),
+('GIAM30K', 'Giảm 30.000đ', 'Áp dụng đơn từ 100k.', 'AMOUNT', 30000, 100000, NULL, NULL, '2099-12-31', TRUE, 'ALL'),
+('PHANTRAM15', 'Giảm 15%', 'Tối đa 25k tiền giảm.', 'PERCENT', 15, 60000, 25000, NULL, '2099-12-31', TRUE, 'ALL'),
+('TRASUA10', 'Ưu đãi đồ uống', 'Giảm 10% cho nhóm đồ uống (demo).', 'PERCENT', 10, 40000, 20000, NULL, '2099-12-31', TRUE, 'DRINK'),
+('SHIP15K', 'Hoàn 15k phí ship', 'Hoàn tối đa bằng phí ship hiện tại.', 'FREESHIP', 0, 60000, NULL, NULL, '2099-12-31', TRUE, 'SHIP'),
+('COMBO50', 'Combo tiết kiệm', 'Giảm cố định 50k cho đơn lớn.', 'AMOUNT', 50000, 200000, NULL, 500, '2099-12-31', TRUE, 'FOOD'),
+('WEEKEND8', 'Cuối tuần -8%', 'Giảm nhẹ cuối tuần.', 'PERCENT', 8, 70000, 18000, NULL, '2099-12-31', TRUE, 'ALL')
+ON CONFLICT (code) DO NOTHING;
+
+-- Tài khoản demo: đăng nhập **demo** / mật khẩu **demo123** (chạy trước seed voucher của user)
+INSERT INTO users (username, email, password_hash, full_name, phone)
+SELECT 'demo', 'demo@foodorder.local',
+        'RcTBa42mEa3BJX1XQTqcgw==$Qf7ZAV+vEQlCisqIQYcVcwOMgvj3hFtaqdoFyrzEnzc=',
+        'Người dùng demo', '0900000001'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE LOWER(TRIM(username)) = 'demo');
+
+INSERT INTO user_addresses (user_id, label, recipient_name, phone, address_line, province, district, is_default)
+SELECT u.id, 'Nhà', u.full_name, u.phone,
+       '123 Đường Demo, Phường Bến Nghé', 'TP.Hồ Chí Minh', 'Quận 1', TRUE
+FROM users u WHERE u.username = 'demo'
+AND NOT EXISTS (SELECT 1 FROM user_addresses ua WHERE ua.user_id = u.id);
+
+INSERT INTO user_vouchers (user_id, voucher_id)
+SELECT u.id, v.id FROM users u, vouchers v
+WHERE u.username = 'demo' AND v.code IN ('GIAM30K', 'FREESHIP')
+ON CONFLICT (user_id, voucher_id) DO NOTHING;
+
+INSERT INTO voucher_usage (user_id, voucher_id, order_id, discount_amount, used_at)
+SELECT u.id, v.id, NULL, 12000, NOW() - INTERVAL '3 days'
+FROM users u, vouchers v
+    WHERE u.username = 'demo' AND v.code = 'PHANTRAM15'
+  AND NOT EXISTS (
+    SELECT 1 FROM voucher_usage hu
+    JOIN vouchers vv ON hu.voucher_id = vv.id
+    JOIN users u2 ON hu.user_id = u2.id
+    WHERE u2.username = 'demo' AND vv.code = 'PHANTRAM15'
+  );
+
+-- ==================================================
+-- Demo: giỏ hàng + vài đơn mẫu cho user **demo** (chạy sau khi đã có foods)
+-- Giỏ: chỉ thêm nếu chưa có dòng (ON CONFLICT DO NOTHING).
+-- Đơn: chỉ seed khi user demo chưa có đơn nào (tránh trùng khi chạy lại script).
+-- ==================================================
+DO $$
+DECLARE
+    uid   INT;
+    aid   INT;
+    fid1  INT;
+    fid2  INT;
+    fid3  INT;
+    p1    NUMERIC(12,0);
+    p2    NUMERIC(12,0);
+    p3    NUMERIC(12,0);
+    oid1  INT;
+    oid2  INT;
+    oid3  INT;
+    t1    NUMERIC(12,0);
+    t2    NUMERIC(12,0);
+    t3    NUMERIC(12,0);
+BEGIN
+    SELECT u.id INTO uid FROM users u WHERE LOWER(TRIM(u.username)) = 'demo' LIMIT 1;
+    IF uid IS NULL THEN
+        RAISE NOTICE 'Không có user demo — bỏ qua seed giỏ/đơn.';
+        RETURN;
+    END IF;
+
+    SELECT ua.id INTO aid
+    FROM user_addresses ua
+    WHERE ua.user_id = uid
+    ORDER BY ua.is_default DESC, ua.id
+    LIMIT 1;
+
+    IF aid IS NULL THEN
+        RAISE NOTICE 'User demo chưa có địa chỉ — bỏ qua seed đơn.';
+        RETURN;
+    END IF;
+
+    SELECT f.id, f.price INTO fid1, p1 FROM foods f WHERE f.is_active = TRUE ORDER BY f.id LIMIT 1;
+    SELECT f.id, f.price INTO fid2, p2 FROM foods f WHERE f.is_active = TRUE ORDER BY f.id LIMIT 1 OFFSET 1;
+    SELECT f.id, f.price INTO fid3, p3 FROM foods f WHERE f.is_active = TRUE ORDER BY f.id LIMIT 1 OFFSET 2;
+
+    IF fid1 IS NULL THEN
+        RETURN;
+    END IF;
+
+    fid2 := COALESCE(fid2, fid1);
+    fid3 := COALESCE(fid3, fid1);
+    p2 := COALESCE(p2, p1);
+    p3 := COALESCE(p3, p1);
+
+    INSERT INTO cart_items (user_id, food_id, quantity)
+    VALUES (uid, fid1, 2), (uid, fid2, 1)
+    ON CONFLICT (user_id, food_id) DO NOTHING;
+
+    IF EXISTS (SELECT 1 FROM orders WHERE user_id = uid) THEN
+        RETURN;
+    END IF;
+
+    t1 := p1 * 1;
+    INSERT INTO orders (user_id, total_price, status, address_id)
+    VALUES (uid, t1, 0, aid)
+    RETURNING id INTO oid1;
+
+    INSERT INTO order_items (order_id, food_id, quantity, price)
+    VALUES (oid1, fid1, 1, p1);
+
+    INSERT INTO order_status_logs (order_id, status, note)
+    VALUES (oid1, 0, 'Đơn hàng vừa được tạo (demo)');
+
+    t2 := p2 * 2;
+    INSERT INTO orders (user_id, total_price, status, address_id)
+    VALUES (uid, t2, 2, aid)
+    RETURNING id INTO oid2;
+
+    INSERT INTO order_items (order_id, food_id, quantity, price)
+    VALUES (oid2, fid2, 2, p2);
+
+    INSERT INTO order_status_logs (order_id, status, note)
+    VALUES
+        (oid2, 0, 'Đơn hàng vừa được tạo (demo)'),
+        (oid2, 1, 'Quán đang chuẩn bị'),
+        (oid2, 2, 'Shipper đang giao');
+
+    t3 := p3 * 1;
+    INSERT INTO orders (user_id, total_price, status, address_id)
+    VALUES (uid, t3, 3, aid)
+    RETURNING id INTO oid3;
+
+    INSERT INTO order_items (order_id, food_id, quantity, price)
+    VALUES (oid3, fid3, 1, p3);
+
+    INSERT INTO order_status_logs (order_id, status, note)
+    VALUES
+        (oid3, 0, 'Đơn hàng vừa được tạo (demo)'),
+        (oid3, 3, 'Đơn đã hoàn thành');
+
+END $$;
+
+-- ==================================================
+-- Bổ sung đơn **lịch sử** (hoàn thành / hủy) cho tab Lịch sử — chạy được nhiều lần,
+-- chỉ chèn khi user demo đang có ít hơn 5 đơn thuộc lịch sử (status 3 hoặc 4).
+-- ==================================================
+DO $$
+DECLARE
+    uid       INT;
+    aid       INT;
+    hist_cnt  INT;
+    need      INT;
+    i         INT;
+    fid_a     INT;
+    fid_b     INT;
+    pa        NUMERIC(12,0);
+    pb        NUMERIC(12,0);
+    new_id    INT;
+    st        INT;
+BEGIN
+    SELECT u.id INTO uid FROM users u WHERE LOWER(TRIM(u.username)) = 'demo' LIMIT 1;
+    IF uid IS NULL THEN
+        RETURN;
+    END IF;
+
+    SELECT ua.id INTO aid
+    FROM user_addresses ua
+    WHERE ua.user_id = uid
+    ORDER BY ua.is_default DESC, ua.id
+    LIMIT 1;
+
+    IF aid IS NULL THEN
+        RETURN;
+    END IF;
+
+    SELECT COUNT(*)::INT INTO hist_cnt FROM orders WHERE user_id = uid AND status IN (3, 4);
+    need := GREATEST(0, 5 - hist_cnt);
+    IF need <= 0 THEN
+        RETURN;
+    END IF;
+
+    SELECT f.id, f.price INTO fid_a, pa FROM foods f WHERE f.is_active = TRUE ORDER BY f.id LIMIT 1 OFFSET 2;
+    SELECT f.id, f.price INTO fid_b, pb FROM foods f WHERE f.is_active = TRUE ORDER BY f.id LIMIT 1 OFFSET 5;
+    fid_a := COALESCE(fid_a, (SELECT id FROM foods WHERE is_active = TRUE ORDER BY id LIMIT 1));
+    fid_b := COALESCE(fid_b, fid_a);
+    pa := COALESCE(pa, (SELECT price FROM foods WHERE id = fid_a));
+    pb := COALESCE(pb, (SELECT price FROM foods WHERE id = fid_b));
+
+    FOR i IN 1..need LOOP
+        st := CASE WHEN i % 3 = 0 THEN 4 ELSE 3 END;
+
+        INSERT INTO orders (user_id, total_price, status, address_id, created_at)
+        VALUES (
+            uid,
+            CASE WHEN st = 4 THEN pa * 1 ELSE pa * 2 + pb * 1 END,
+            st,
+            aid,
+            NOW() - ((i::text || ' days')::INTERVAL)
+        )
+        RETURNING id INTO new_id;
+
+        IF st = 4 THEN
+            INSERT INTO order_items (order_id, food_id, quantity, price)
+            VALUES (new_id, fid_a, 1, pa);
+            INSERT INTO order_status_logs (order_id, status, note)
+            VALUES
+                (new_id, 0, 'Đơn demo — chờ xác nhận'),
+                (new_id, 4, 'Đơn demo — đã hủy');
+        ELSE
+            INSERT INTO order_items (order_id, food_id, quantity, price)
+            VALUES
+                (new_id, fid_a, 2, pa),
+                (new_id, fid_b, 1, pb);
+            INSERT INTO order_status_logs (order_id, status, note)
+            VALUES
+                (new_id, 0, 'Đơn demo — chờ xác nhận'),
+                (new_id, 2, 'Đơn demo — đang giao'),
+                (new_id, 3, 'Đơn demo — hoàn thành');
+        END IF;
+    END LOOP;
+END $$;

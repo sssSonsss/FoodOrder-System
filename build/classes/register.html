@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký - FoodOrder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .auth-wrap { max-width: 520px; margin: 36px auto; padding: 0 5% 64px; }
+        .auth-card { background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm); padding:22px; }
+        .auth-card h1 { font-size:1.35rem; margin-bottom:8px; }
+        .auth-card label { display:block; font-weight:600; margin:12px 0 6px; font-size:.92rem; }
+        .auth-card input { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box; }
+        .auth-actions { margin-top:18px; display:flex; gap:10px; flex-wrap:wrap; }
+        .auth-error { background:#fdeceb; color:#991b1b; padding:10px 12px; border-radius:10px; font-size:.9rem; margin-bottom:12px; display:none; }
+        .auth-error.show { display:block; }
+        .auth-section { margin-top:18px; padding-top:14px; border-top:1px dashed var(--border); }
+        .auth-section h2 { font-size:1rem; margin-bottom:8px; }
+        .hint { font-size:.82rem; color:var(--text-light); margin-top:4px; }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
+    <ul class="navbar-nav">
+        <li><a href="index.html">Trang chủ</a></li>
+        <li><a href="menu.html">Thực đơn</a></li>
+    </ul>
+    <div class="navbar-actions">
+        <div class="navbar-icons" id="navbar-icons"></div>
+    </div>
+</nav>
+
+<section class="auth-wrap">
+    <div class="auth-card">
+        <h1>Đăng ký tài khoản</h1>
+        <p style="margin:0;color:var(--text-light);font-size:.94rem;">Kèm địa chỉ nhận hàng để đặt món nhanh hơn ở các lần sau.</p>
+        <div id="auth-error" class="auth-error"></div>
+
+        <form method="post" action="AuthServlet">
+            <input type="hidden" name="action" value="register">
+            <input type="hidden" name="redirect" id="redirect" value="/index.html">
+            <input type="hidden" name="latitude" id="latitude" value="">
+            <input type="hidden" name="longitude" id="longitude" value="">
+
+            <label for="username">Tên đăng nhập</label>
+            <input id="username" name="username" required minlength="3" maxlength="40" autocomplete="username" placeholder="Ít nhất 3 ký tự">
+
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email">
+
+            <label for="password">Mật khẩu</label>
+            <input id="password" name="password" type="password" required minlength="6" autocomplete="new-password">
+
+            <label for="fullName">Họ và tên</label>
+            <input id="fullName" name="fullName" required minlength="2" maxlength="120">
+
+            <label for="phone">Số điện thoại</label>
+            <input id="phone" name="phone" required placeholder="VD: 0912345678">
+
+            <div class="auth-section">
+                <h2>📍 Địa chỉ nhận hàng</h2>
+                <label for="addressLabel">Nhãn địa chỉ</label>
+                <input id="addressLabel" name="addressLabel" placeholder="Nhà / Công ty / ..." value="Nhà">
+
+                <label for="recipientName">Người nhận (để trống = họ tên trên)</label>
+                <input id="recipientName" name="recipientName" placeholder="Tùy chọn">
+
+                <label for="addressPhone">SĐT tại địa chỉ</label>
+                <input id="addressPhone" name="addressPhone" placeholder="Để trống = SĐT tài khoản">
+
+                <label for="addressLine">Địa chỉ chi tiết</label>
+                <input id="addressLine" name="addressLine" required minlength="5" maxlength="500" placeholder="Số nhà, đường, tòa nhà...">
+
+                <label for="district">Quận / Huyện</label>
+                <input id="district" name="district" placeholder="VD: Quận 1">
+
+                <label for="province">Tỉnh / Thành phố</label>
+                <input id="province" name="province" placeholder="VD: TP.Hồ Chí Minh">
+
+                <button type="button" class="btn btn-outline" style="margin-top:12px;" id="btn-geo">📍 Lấy vị trí hiện tại (GPS)</button>
+                <p class="hint">GPS chỉ để lưu kèm đơn hàng (demo). Bạn vẫn cần nhập địa chỉ chữ.</p>
+            </div>
+
+            <div class="auth-actions">
+                <button class="btn btn-primary" type="submit">Đăng ký</button>
+                <a class="btn btn-ghost" href="login.html">Đã có tài khoản</a>
+            </div>
+        </form>
+    </div>
+</section>
+<script>
+    (function () {
+        const params = new URLSearchParams(window.location.search);
+        const redir = params.get("redirect");
+        if (redir && redir.startsWith("/") && !redir.includes("..")) {
+            document.getElementById("redirect").value = redir;
+        }
+        const err = params.get("error");
+        const box = document.getElementById("auth-error");
+        const map = {
+            validation: "Thông tin chưa đủ hoặc không hợp lệ (mật khẩu ≥ 6 ký tự, địa chỉ ≥ 5 ký tự).",
+            user_exists: "Tên đăng nhập đã được sử dụng.",
+            email_exists: "Email đã được đăng ký.",
+            system: "Không tạo được tài khoản. Thử lại sau."
+        };
+        if (err && map[err]) {
+            box.textContent = map[err];
+            box.classList.add("show");
+        }
+
+        document.getElementById("btn-geo").addEventListener("click", function () {
+            if (!navigator.geolocation) {
+                alert("Trình duyệt không hỗ trợ định vị.");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                document.getElementById("latitude").value = String(pos.coords.latitude);
+                document.getElementById("longitude").value = String(pos.coords.longitude);
+                alert("Đã lưu tọa độ GPS vào hồ sơ đăng ký.");
+            }, function () {
+                alert("Không lấy được vị trí. Hãy cho phép quyền vị trí hoặc nhập tay.");
+            });
+        });
+    })();
+</script>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
+</body>
+</html>

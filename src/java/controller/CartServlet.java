@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import utils.AuthHelper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ public class CartServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
 
         String view = request.getParameter("view");
         if (view == null || view.trim().isEmpty()) {
@@ -39,15 +40,46 @@ public class CartServlet extends HttpServlet {
         }
 
         if ("tracking-data".equals(view)) {
+            disableBrowserCache(response);
             response.setContentType("application/json;charset=UTF-8");
-            orderDAO.updateOrderStatusForTrackingTest(userId);
-            List<Order> delivering = getOrdersByStatuses(userId, 1, 2);
+            if (userId <= 0) {
+                response.getWriter().print("[]");
+                return;
+            }
+            /* Không tự đẩy trạng thái đơn ở đây (tránh mất đơn khỏi tab sau vài lần poll). */
+            List<Order> delivering = getOrdersByStatuses(userId, 0, 1, 2);
             response.getWriter().print(trackingOrdersToJson(delivering));
             return;
         }
 
+        if ("cart-data".equals(view)) {
+            disableBrowserCache(response);
+            response.setContentType("application/json;charset=UTF-8");
+            if (userId <= 0) {
+                response.getWriter().print("{\"items\":[],\"grand_total\":0}");
+                return;
+            }
+            maybeRefillSampleCartForApi(request, userId);
+            List<CartItem> cartItems = cartDAO.getCartByUserId(userId);
+            double grandTotal = calculateGrandTotal(cartItems);
+            response.getWriter().print("{\"items\":" + cartItemsToJson(cartItems) + ",\"grand_total\":" + grandTotal + "}");
+            return;
+        }
+
+        if (userId <= 0) {
+            AuthHelper.redirectToLogin(request, response);
+            return;
+        }
+
+        disableBrowserCache(response);
+        /* Tab Giỏ: sau đặt hàng giỏ bị xóa — với phiên đăng nhập demo, tự nạp lại món mẫu để luôn có dữ liệu hiển thị */
+        if ("cart".equals(view)) {
+            maybeRefillSampleCartForPage(request, userId);
+        }
+
         List<CartItem> cartItems = cartDAO.getCartByUserId(userId);
-        List<Order> deliveringOrders = getOrdersByStatuses(userId, 1, 2);
+        /* 0 = chờ xác nhận — phải hiện cùng tab với đơn đang xử lý */
+        List<Order> deliveringOrders = getOrdersByStatuses(userId, 0, 1, 2);
         List<Order> historyOrders = getOrdersByStatuses(userId, 3, 4);
 
         Map<Integer, List<OrderItem>> orderItemsMap = new HashMap<>();
@@ -58,30 +90,7 @@ public class CartServlet extends HttpServlet {
             orderItemsMap.put(order.getId(), orderDAO.getOrderItems(order.getId()));
         }
 
-        // Fake dữ liệu demo khi chưa có đơn thực tế để trình diễn giao diện
-        if (deliveringOrders.isEmpty()) {
-            List<Order> fakeDelivering = buildFakeDeliveringOrders();
-            deliveringOrders.addAll(fakeDelivering);
-            for (Order order : fakeDelivering) {
-                orderItemsMap.put(order.getId(), buildFakeOrderItems(order.getId()));
-            }
-        }
-
-        if (historyOrders.isEmpty()) {
-            List<Order> fakeHistory = buildFakeHistoryOrders();
-            historyOrders.addAll(fakeHistory);
-            for (Order order : fakeHistory) {
-                orderItemsMap.put(order.getId(), buildFakeOrderItems(order.getId()));
-            }
-        }
-
         double grandTotal = calculateGrandTotal(cartItems);
-
-        if ("cart-data".equals(view)) {
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().print("{\"items\":" + cartItemsToJson(cartItems) + ",\"grand_total\":" + grandTotal + "}");
-            return;
-        }
 
         request.setAttribute("cartItems", cartItems);
         request.setAttribute("grandTotal", grandTotal);
@@ -93,13 +102,46 @@ public class CartServlet extends HttpServlet {
         request.getRequestDispatcher("/cart.jsp").forward(request, response);
     }
 
+    private static void disableBrowserCache(HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+    }
+
+    /** User đăng nhập bằng tài khoản demo (session username). */
+    private static boolean isDemoSessionUser(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return false;
+        }
+        Object u = session.getAttribute("username");
+        if (u == null) {
+            return false;
+        }
+        return "demo".equalsIgnoreCase(String.valueOf(u).trim());
+    }
+
+    /** JSON giỏ (checkout): chỉ tự nạp mẫu cho phiên đăng nhập demo. */
+    private void maybeRefillSampleCartForApi(HttpServletRequest request, int userId) {
+        if (isDemoSessionUser(request)) {
+            cartDAO.refillSampleCartIfEmpty(userId);
+        }
+    }
+
+    /** Trang tab Giỏ: demo luôn nạp khi trống; mọi user có thể ?fillSample=1 */
+    private void maybeRefillSampleCartForPage(HttpServletRequest request, int userId) {
+        if (isDemoSessionUser(request) || "1".equals(request.getParameter("fillSample"))) {
+            cartDAO.refillSampleCartIfEmpty(userId);
+        }
+    }
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
+        disableBrowserCache(response);
         response.setContentType("application/json;charset=UTF-8");
 
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
         if (userId <= 0) {
             response.setStatus(401);
             response.getWriter().print("{\"error\":\"Vui lòng đăng nhập để thao tác giỏ hàng\"}");
@@ -161,6 +203,7 @@ public class CartServlet extends HttpServlet {
     }
 
     private void handleUpdate(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        int userId = AuthHelper.getUserId(request);
         int cartItemId = parseInt(request.getParameter("cartItemId"), 0);
         int quantity = parseInt(request.getParameter("quantity"), 0);
 
@@ -170,7 +213,7 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        boolean ok = cartDAO.updateQuantity(cartItemId, quantity);
+        boolean ok = cartDAO.updateQuantity(cartItemId, quantity, userId);
         if (!ok) {
             response.setStatus(500);
             response.getWriter().print("{\"error\":\"Không thể cập nhật số lượng\"}");
@@ -180,6 +223,7 @@ public class CartServlet extends HttpServlet {
     }
 
     private void handleDelete(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        int userId = AuthHelper.getUserId(request);
         int cartItemId = parseInt(request.getParameter("cartItemId"), 0);
         if (cartItemId <= 0) {
             response.setStatus(400);
@@ -187,14 +231,14 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        boolean ok = cartDAO.removeFromFile(cartItemId);
+        boolean ok = cartDAO.removeFromCart(cartItemId, userId);
         if (!ok) {
             response.setStatus(500);
             response.getWriter().print("{\"error\":\"Không thể xóa món khỏi giỏ\"}");
             return;
         }
         response.getWriter().print("{\"message\":\"Đã xóa món khỏi giỏ hàng\"}");
-        notificationDAO.createNotification(getCurrentUserId(request), "Đã xóa món khỏi giỏ",
+        notificationDAO.createNotification(userId, "Đã xóa món khỏi giỏ",
                 "Một món ăn đã được xóa khỏi giỏ hàng của bạn.", "SYSTEM");
     }
 
@@ -294,56 +338,6 @@ public class CartServlet extends HttpServlet {
                     .replace("\n", "\\n")
                     .replace("\r", "\\r")
                     .replace("\t", "\\t");
-    }
-
-    private List<Order> buildFakeDeliveringOrders() {
-        List<Order> list = new ArrayList<>();
-        list.add(new Order(9001, 1, 148000, 1, 1, "2026-05-08 00:20:00"));
-        list.add(new Order(9002, 1, 210000, 2, 1, "2026-05-08 00:18:00"));
-        return list;
-    }
-
-    private List<Order> buildFakeHistoryOrders() {
-        List<Order> list = new ArrayList<>();
-        list.add(new Order(8998, 1, 175000, 3, 1, "2026-05-07 19:30:00"));
-        list.add(new Order(8997, 1, 92000, 4, 1, "2026-05-07 17:10:00"));
-        return list;
-    }
-
-    private List<OrderItem> buildFakeOrderItems(int orderId) {
-        List<OrderItem> list = new ArrayList<>();
-        list.add(new OrderItem(orderId, 1, "Trà sữa trân châu đen", 2, 35000, "images/trasua-placeholder.svg"));
-        list.add(new OrderItem(orderId, 7, "Bánh mì pate thịt", 1, 25000, "images/banhmi-placeholder.svg"));
-        return list;
-    }
-
-    private int getCurrentUserId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Object[] keys = {
-                session.getAttribute("userId"),
-                session.getAttribute("user_id"),
-                session.getAttribute("uid")
-            };
-            for (Object key : keys) {
-                int id = parseObjectToInt(key);
-                if (id > 0) return id;
-            }
-        }
-        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
-        if (userIdFromParam > 0) return userIdFromParam;
-        // Fake user để test end-to-end khi chưa có đăng nhập
-        return 1;
-    }
-
-    private int parseObjectToInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception ignored) {
-            return 0;
-        }
     }
 
     private int parseInt(String value, int defaultValue) {

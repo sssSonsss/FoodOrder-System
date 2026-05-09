@@ -18,8 +18,12 @@
 <body>
 <nav class="navbar">
     <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
+    <ul class="navbar-nav">
+        <li><a href="index.html">Trang chủ</a></li>
+        <li><a href="menu.html">Thực đơn</a></li>
+    </ul>
     <div class="navbar-actions">
-        <a class="btn btn-ghost" href="menu.html">← Quay lại thực đơn</a>
+        <div class="navbar-icons" id="navbar-icons"></div>
     </div>
 </nav>
 
@@ -99,5 +103,7 @@
         document.getElementById("order-item").innerHTML = "<p>Chưa chọn món ăn. Vui lòng quay lại thực đơn.</p>";
     }
 </script>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

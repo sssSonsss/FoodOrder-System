@@ -8,7 +8,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import utils.AuthHelper;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,8 +21,14 @@ public class NotificationServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
         response.setContentType("application/json;charset=UTF-8");
+
+        if (userId <= 0) {
+            response.setStatus(401);
+            response.getWriter().print("{\"needLogin\":true,\"unread\":0,\"items\":[]}");
+            return;
+        }
 
         List<Notification> list = notificationDAO.getNotificationsByUserId(userId);
         int unread = notificationDAO.countUnreadByUserId(userId);
@@ -35,6 +41,13 @@ public class NotificationServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setContentType("application/json;charset=UTF-8");
 
+        int userId = AuthHelper.getUserId(request);
+        if (userId <= 0) {
+            response.setStatus(401);
+            response.getWriter().print("{\"error\":\"Vui lòng đăng nhập\"}");
+            return;
+        }
+
         String action = request.getParameter("action");
         if ("mark-read".equals(action)) {
             int id = parseInt(request.getParameter("notificationId"), 0);
@@ -43,7 +56,7 @@ public class NotificationServlet extends HttpServlet {
                 response.getWriter().print("{\"error\":\"Thông báo không hợp lệ\"}");
                 return;
             }
-            boolean ok = notificationDAO.markAsRead(id);
+            boolean ok = notificationDAO.markAsRead(id, userId);
             if (!ok) {
                 response.setStatus(500);
                 response.getWriter().print("{\"error\":\"Không thể cập nhật trạng thái đã đọc\"}");
@@ -55,34 +68,6 @@ public class NotificationServlet extends HttpServlet {
 
         response.setStatus(400);
         response.getWriter().print("{\"error\":\"Action không hợp lệ\"}");
-    }
-
-    private int getCurrentUserId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Object[] keys = {
-                session.getAttribute("userId"),
-                session.getAttribute("user_id"),
-                session.getAttribute("uid")
-            };
-            for (Object key : keys) {
-                int id = parseObjectToInt(key);
-                if (id > 0) return id;
-            }
-        }
-        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
-        if (userIdFromParam > 0) return userIdFromParam;
-        return 1;
-    }
-
-    private int parseObjectToInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception ignored) {
-            return 0;
-        }
     }
 
     private int parseInt(String value, int defaultValue) {

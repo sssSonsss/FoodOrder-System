@@ -1,6 +1,9 @@
 package controller;
 
 import dao.OrderDAO;
+import dao.UserAddressDAO;
+import dao.VoucherDAO;
+import utils.AuthHelper;
 import model.Order;
 import model.OrderItem;
 
@@ -9,8 +12,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -19,13 +20,15 @@ import java.util.List;
 public class OrderServlet extends HttpServlet {
 
     private final OrderDAO orderDAO = new OrderDAO();
+    private final VoucherDAO voucherDAO = new VoucherDAO();
+    private final UserAddressDAO userAddressDAO = new UserAddressDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         String action = request.getParameter("action");
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
 
         if (userId <= 0) {
             response.setStatus(401);
@@ -59,7 +62,7 @@ public class OrderServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         String action = request.getParameter("action");
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
 
         if (userId <= 0) {
             response.setStatus(401);
@@ -95,9 +98,11 @@ public class OrderServlet extends HttpServlet {
             throws ServletException, IOException {
 
         int addressId = parseInt(request.getParameter("addressId"), 0);
-        if (addressId <= 0) {
-            // Chế độ demo: tự dùng địa chỉ mặc định để không chặn luồng đặt đơn
-            addressId = 1;
+        if (addressId <= 0 || userAddressDAO.findByIdForUser(addressId, userId) == null) {
+            request.setAttribute("errorMessage",
+                    "Địa chỉ giao hàng không hợp lệ. Vui lòng chọn địa chỉ đã lưu trong tài khoản.");
+            request.getRequestDispatcher("/order-success.jsp").forward(request, response);
+            return;
         }
 
         try {
@@ -105,6 +110,11 @@ public class OrderServlet extends HttpServlet {
             if (orderId <= 0) {
                 request.setAttribute("errorMessage", "Giỏ hàng đang trống, không thể tạo đơn.");
             } else {
+                String voucherCode = request.getParameter("voucherCode");
+                double discountApplied = parseDouble(request.getParameter("discountApplied"), 0);
+                if (voucherCode != null && !voucherCode.trim().isEmpty() && discountApplied >= 0) {
+                    voucherDAO.markVoucherUsed(userId, voucherCode.trim(), orderId, discountApplied);
+                }
                 request.setAttribute("successMessage", "Đặt hàng thành công. Cảm ơn bạn đã tin tưởng FoodOrder.");
                 request.setAttribute("orderId", orderId);
             }
@@ -208,38 +218,17 @@ public class OrderServlet extends HttpServlet {
         response.getWriter().print("{\"message\":\"Gửi đánh giá thành công\"}");
     }
 
-    private int getCurrentUserId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Object[] keys = {
-                session.getAttribute("userId"),
-                session.getAttribute("user_id"),
-                session.getAttribute("uid")
-            };
-            for (Object key : keys) {
-                int id = parseObjectToInt(key);
-                if (id > 0) return id;
-            }
-        }
-        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
-        if (userIdFromParam > 0) return userIdFromParam;
-        // Fake user để test end-to-end khi chưa có đăng nhập
-        return 1;
-    }
-
-    private int parseObjectToInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception ignored) {
-            return 0;
-        }
-    }
-
     private int parseInt(String value, int defaultValue) {
         try {
             return Integer.parseInt(value);
+        } catch (Exception ignored) {
+            return defaultValue;
+        }
+    }
+
+    private double parseDouble(String value, double defaultValue) {
+        try {
+            return Double.parseDouble(value);
         } catch (Exception ignored) {
             return defaultValue;
         }

@@ -146,6 +146,7 @@ function addToCart() {
     if (!currentFood) return;
     fetch("CartServlet", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
             action: "add",
@@ -153,8 +154,14 @@ function addToCart() {
             quantity: String(quantity)
         }).toString()
     })
-    .then(r => r.json())
-    .then(data => {
+    .then(r => r.json().then(data => ({ status: r.status, data })))
+    .then(({ status, data }) => {
+        if (status === 401) {
+            const path = window.location.pathname.split("/").filter(Boolean);
+            const rel = path.length >= 2 ? "/" + path.slice(1).join("/") : window.location.pathname;
+            window.location.href = "login.html?redirect=" + encodeURIComponent(rel + window.location.search);
+            return;
+        }
         if (data.error) {
             showToast(data.error, "error");
             return;

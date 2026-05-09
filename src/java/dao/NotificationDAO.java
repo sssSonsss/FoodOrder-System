@@ -37,9 +37,6 @@ public class NotificationDAO {
             e.printStackTrace();
         }
 
-        if (list.isEmpty()) {
-            list.addAll(buildFakeNotifications(userId));
-        }
         return list;
     }
 
@@ -57,11 +54,12 @@ public class NotificationDAO {
         return 0;
     }
 
-    public boolean markAsRead(int notificationId) {
-        String sql = "UPDATE notifications SET is_read = true WHERE id = ?";
+    public boolean markAsRead(int notificationId, int userId) {
+        String sql = "UPDATE notifications SET is_read = true WHERE id = ? AND user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, notificationId);
+            ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,14 +82,4 @@ public class NotificationDAO {
         }
     }
 
-    private List<Notification> buildFakeNotifications(int userId) {
-        List<Notification> fake = new ArrayList<>();
-        fake.add(new Notification(0, userId, "Đơn #9002 đang giao",
-                "Shipper đang đến với bạn. Dự kiến giao trong 10 phút nữa.", "ORDER", false, "Vừa xong"));
-        fake.add(new Notification(0, userId, "Đơn #8998 đã hoàn thành",
-                "Đơn hàng đã giao thành công. Mời bạn đánh giá món ăn để nhận xu.", "ORDER", false, "2 phút trước"));
-        fake.add(new Notification(0, userId, "Đơn #8997 đã hủy",
-                "Đơn bị hủy do cửa hàng quá tải. Bạn có thể bấm Mua lại để đặt lại nhanh.", "SYSTEM", false, "5 phút trước"));
-        return fake;
-    }
 }

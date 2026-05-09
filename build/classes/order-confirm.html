@@ -20,7 +20,13 @@
 <body>
 <nav class="navbar">
     <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
-    <div class="navbar-actions"><a class="btn btn-ghost" href="checkout.html">← Quay lại bước Đặt hàng</a></div>
+    <ul class="navbar-nav">
+        <li><a href="index.html">Trang chủ</a></li>
+        <li><a href="menu.html">Thực đơn</a></li>
+    </ul>
+    <div class="navbar-actions">
+        <div class="navbar-icons" id="navbar-icons"></div>
+    </div>
 </nav>
 
 <section class="confirm-wrap">
@@ -36,6 +42,7 @@
         <input type="hidden" name="paymentMethod" id="f-paymentMethod" value="">
         <input type="hidden" name="shippingMethod" id="f-shippingMethod" value="">
         <input type="hidden" name="voucherCode" id="f-voucherCode" value="">
+        <input type="hidden" name="discountApplied" id="f-discountApplied" value="0">
 
         <div class="confirm-grid">
             <div class="panel">
@@ -69,7 +76,8 @@
     const q = new URLSearchParams(window.location.search);
     const foodId = Number(q.get("foodId") || 0);
     const quantity = Math.max(1, Number(q.get("quantity") || 1));
-    const addressId = q.get("addressId") || "1";
+    const addressId = q.get("addressId") || "";
+    const addressSummary = q.get("addressSummary") || "";
     const paymentMethod = q.get("paymentMethod") || "COD";
     const shippingMethod = q.get("shippingMethod") || "STANDARD";
     const voucherCode = q.get("voucherCode") || "";
@@ -77,6 +85,24 @@
     const discount = Number(q.get("discount") || 0);
     const shippingFee = Number(q.get("shippingFee") || 0);
     const total = Number(q.get("total") || 0);
+
+    function redirectPathForLogin() {
+        let pathname = window.location.pathname || "/";
+        const segs = pathname.split("/").filter(Boolean);
+        if (segs.length >= 2) pathname = "/" + segs.slice(1).join("/");
+        return pathname + (window.location.search || "");
+    }
+
+    fetch("AuthServlet?action=status", { headers: { Accept: "application/json" } })
+        .then(r => r.json())
+        .then(s => {
+            if (!s.loggedIn) {
+                window.location.href = "login.html?redirect=" + encodeURIComponent(redirectPathForLogin());
+            }
+        })
+        .catch(() => {
+            window.location.href = "login.html?redirect=" + encodeURIComponent(redirectPathForLogin());
+        });
 
     function formatMoney(v) { return Number(v || 0).toLocaleString("vi-VN") + "đ"; }
     function payLabel(v) {
@@ -93,8 +119,12 @@
         document.getElementById("f-paymentMethod").value = paymentMethod;
         document.getElementById("f-shippingMethod").value = shippingMethod;
         document.getElementById("f-voucherCode").value = voucherCode;
+        document.getElementById("f-discountApplied").value = String(discount);
 
-        document.getElementById("v-address").textContent = "Mã địa chỉ #" + addressId;
+        let addrText = addressSummary || "";
+        if (!addrText && addressId) addrText = "Mã địa chỉ #" + addressId;
+        if (!addrText) addrText = "(Chưa chọn địa chỉ)";
+        document.getElementById("v-address").textContent = addrText + (addressId ? " (#" + addressId + ")" : "");
         document.getElementById("v-payment").textContent = payLabel(paymentMethod);
         document.getElementById("v-shipping").textContent = shipLabel(shippingMethod);
         document.getElementById("v-voucher").textContent = voucherCode ? voucherCode : "Không áp dụng";
@@ -126,17 +156,19 @@
     }
 
     document.getElementById("confirm-form").addEventListener("submit", function (e) {
-        if (!foodId) return;
+        if (foodId <= 0) return;
         e.preventDefault();
+        const form = this;
         fetch("CartServlet", {
             method: "POST",
+            credentials: "same-origin",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
                 action: "add",
                 foodId: String(foodId),
                 quantity: String(quantity)
             }).toString()
-        }).then(() => this.submit()).catch(() => this.submit());
+        }).then(() => form.submit()).catch(() => form.submit());
     });
 
     renderInfo();
@@ -148,8 +180,10 @@
                 document.getElementById("confirm-items").innerHTML = "<p>Không tải được thông tin món đã chọn.</p>";
             });
     } else {
-        document.getElementById("confirm-items").innerHTML = "<p>Đang dùng dữ liệu giỏ hàng hiện tại.</p>";
+        document.getElementById("confirm-items").innerHTML = "<p>Nội dung đơn lấy từ <strong>giỏ hàng</strong> của bạn sau khi bấm Đặt đơn.</p>";
     }
 </script>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

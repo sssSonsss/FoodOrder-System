@@ -9,7 +9,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import utils.AuthHelper;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -29,19 +29,25 @@ public class OrderTrackingServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int userId = getCurrentUserId(request);
+        int userId = AuthHelper.getUserId(request);
         int orderId = parseInt(request.getParameter("orderId"), 0);
 
-        if (userId <= 0 || orderId <= 0) {
-            response.setStatus(400);
-            response.getWriter().print("{\"error\":\"Thông tin tracking không hợp lệ\"}");
+        if (orderId <= 0) {
+            request.setAttribute("order", null);
+            request.setAttribute("trackingError", "Mã đơn hàng không hợp lệ.");
+            request.getRequestDispatcher("/order-tracking.jsp").forward(request, response);
+            return;
+        }
+        if (userId <= 0) {
+            AuthHelper.redirectToLogin(request, response);
             return;
         }
 
         Order order = orderDAO.getOrderById(orderId, userId);
         if (order == null) {
-            response.setStatus(404);
-            response.getWriter().print("{\"error\":\"Không tìm thấy đơn hàng\"}");
+            request.setAttribute("order", null);
+            request.setAttribute("trackingError", "Không tìm thấy đơn hàng hoặc đơn không thuộc tài khoản của bạn.");
+            request.getRequestDispatcher("/order-tracking.jsp").forward(request, response);
             return;
         }
 
@@ -86,35 +92,6 @@ public class OrderTrackingServlet extends HttpServlet {
                 return "Giao hàng thành công, chúc bạn ngon miệng";
             default:
                 return "Đơn hàng đang chờ xác nhận";
-        }
-    }
-
-    private int getCurrentUserId(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            Object[] keys = {
-                session.getAttribute("userId"),
-                session.getAttribute("user_id"),
-                session.getAttribute("uid")
-            };
-            for (Object key : keys) {
-                int id = parseObjectToInt(key);
-                if (id > 0) return id;
-            }
-        }
-        int userIdFromParam = parseInt(request.getParameter("userId"), 0);
-        if (userIdFromParam > 0) return userIdFromParam;
-        // Fake user để test end-to-end khi chưa có đăng nhập
-        return 1;
-    }
-
-    private int parseObjectToInt(Object value) {
-        if (value == null) return 0;
-        if (value instanceof Integer) return (Integer) value;
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception ignored) {
-            return 0;
         }
     }
 

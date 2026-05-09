@@ -18,13 +18,10 @@
     </a>
     <ul class="navbar-nav">
         <li><a href="index.html" id="nav-home">Trang chủ</a></li>
-        <li><a href="menu.html" id="nav-menu">Thực đơn</a></li>
-        <li><a href="index.html#about" id="nav-about">Giới thiệu</a></li>
-        <li><a href="index.html#contact" id="nav-contact">Liên hệ</a></li>
+        <li><a href="menu.html" class="active" id="nav-menu">Thực đơn</a></li>
     </ul>
     <div class="navbar-actions">
-        <a href="CartServlet" class="btn btn-ghost" id="btn-cart">🛒 Giỏ hàng</a>
-        <a href="menu.html" class="btn btn-ghost" id="btn-back">← Quay lại</a>
+        <div class="navbar-icons" id="navbar-icons"></div>
     </div>
 </nav>
 
@@ -173,5 +170,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="js/food-detail.js"></script>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

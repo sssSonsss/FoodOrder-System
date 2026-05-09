@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/index.css">
 </head>
-<body>
+<body data-page="home">
 
-<!-- ===== NAVBAR ===== -->
+<!-- ===== NAVBAR — logo · Trang chủ · Thực đơn · thông báo · tài khoản ===== -->
 <nav class="navbar" id="navbar">
     <a class="navbar-brand" href="index.html">
         <div class="logo-icon">🍜</div>
@@ -19,12 +19,9 @@
     <ul class="navbar-nav">
         <li><a href="index.html" class="active" id="nav-home">Trang chủ</a></li>
         <li><a href="menu.html" id="nav-menu">Thực đơn</a></li>
-        <li><a href="#about" id="nav-about">Giới thiệu</a></li>
-        <li><a href="#contact" id="nav-contact">Liên hệ</a></li>
     </ul>
     <div class="navbar-actions">
-        <button class="btn btn-ghost" id="btn-search-toggle" onclick="toggleSearchBar()" title="Tìm kiếm">🔍</button>
-        <a href="menu.html" class="btn btn-primary" id="btn-order">🛒 Đặt món</a>
+        <div class="navbar-icons" id="navbar-icons"></div>
     </div>
 </nav>
 
@@ -117,7 +114,7 @@
 
 
 <!-- ===== CATEGORY SECTION ===== -->
-<section class="section" id="categories">
+<section class="section" id="about">
     <div class="section-header">
         <div class="section-tag">🍽️ Danh mục</div>
         <h2 class="section-title">Khám phá theo loại món</h2>
@@ -219,8 +216,9 @@
             <ul>
                 <li><a href="index.html">Trang chủ</a></li>
                 <li><a href="menu.html">Thực đơn</a></li>
-                <li><a href="#about">Giới thiệu</a></li>
-                <li><a href="#contact">Liên hệ</a></li>
+                <li><a href="index.html#about">Giới thiệu</a></li>
+                <li><a href="index.html#contact">Liên hệ</a></li>
+                <li><a href="VoucherServlet">Voucher</a></li>
             </ul>
         </div>
         <div>
@@ -234,7 +232,7 @@
         </div>
     </div>
     <div class="footer-bottom">
-        <p>© 2025 FoodOrder – BTL Lập Trình Web. All rights reserved.</p>
+        <p>© 2026 FoodOrder – BTL Lập Trình Web. All rights reserved.</p>
     </div>
 </footer>
 
@@ -242,5 +240,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="js/index.js?v=2"></script>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

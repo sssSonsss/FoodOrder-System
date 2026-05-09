@@ -76,13 +76,14 @@ public class CartDAO {
         }
     }
 
-    public boolean updateQuantity(int cartItemId, int quantity) {
-        String sql = "UPDATE cart_items SET quantity = ? WHERE id = ?";
+    public boolean updateQuantity(int cartItemId, int quantity, int userId) {
+        String sql = "UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, quantity);
             ps.setInt(2, cartItemId);
+            ps.setInt(3, userId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
@@ -90,16 +91,55 @@ public class CartDAO {
         }
     }
 
-    public boolean removeFromFile(int cartItemId) {
-        String sql = "DELETE FROM cart_items WHERE id = ?";
+    public boolean removeFromCart(int cartItemId, int userId) {
+        String sql = "DELETE FROM cart_items WHERE id = ? AND user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, cartItemId);
+            ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    /**
+     * Giỏ trống (vd. sau đặt hàng DB xóa cart): thêm vài món mẫu từ thực đơn đang active.
+     */
+    public void refillSampleCartIfEmpty(int userId) {
+        if (userId <= 0) {
+            return;
+        }
+        if (!getCartByUserId(userId).isEmpty()) {
+            return;
+        }
+        Integer f0 = findActiveFoodIdAtOffset(0);
+        Integer f1 = findActiveFoodIdAtOffset(1);
+        if (f0 != null) {
+            addToCart(userId, f0, 2);
+        }
+        if (f1 != null) {
+            addToCart(userId, f1, 1);
+        } else if (f0 != null) {
+            addToCart(userId, f0, 1);
+        }
+    }
+
+    private Integer findActiveFoodIdAtOffset(int offset) {
+        String sql = "SELECT id FROM foods WHERE is_active = TRUE ORDER BY id ASC LIMIT 1 OFFSET ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Math.max(0, offset));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public boolean checkStock(int foodId, int quantity) {

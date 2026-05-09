@@ -31,11 +31,12 @@
                 <p>Mã đơn hàng của bạn: <strong>#<%= orderId %></strong></p>
                 <div class="order-actions" style="justify-content:center;">
                     <a class="btn btn-primary" href="OrderTrackingServlet?orderId=<%= orderId %>">Theo dõi đơn hàng</a>
-                    <a class="btn btn-outline" href="OrderServlet?action=my-page">Đơn hàng của tôi</a>
+                    <a class="btn btn-outline" href="CartServlet?view=tracking">Đơn hàng của tôi</a>
                 </div>
             <% } %>
         <% } %>
     </div>
 </section>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

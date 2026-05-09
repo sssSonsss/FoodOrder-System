@@ -3,14 +3,15 @@
 <%@ page import="model.Order" %>
 <%@ page import="model.OrderItem" %>
 <%!
-    private String statusLabel(String status) {
-        if ("CHO_XAC_NHAN".equals(status)) return "Chờ xác nhận";
-        if ("DANG_CHUAN_BI".equals(status)) return "Đang chuẩn bị";
-        if ("SHIPPER_DA_LAY".equals(status)) return "Shipper đã lấy hàng";
-        if ("DANG_GIAO".equals(status)) return "Đang giao";
-        if ("DA_GIAO_THANH_CONG".equals(status)) return "Đã giao thành công";
-        if ("DA_HUY".equals(status)) return "Đã hủy";
-        return status == null ? "" : status;
+    private String statusLabel(int status) {
+        switch (status) {
+            case 0: return "Chờ xác nhận";
+            case 1: return "Đang chuẩn bị";
+            case 2: return "Đang giao";
+            case 3: return "Hoàn thành";
+            case 4: return "Đã hủy";
+            default: return "Không xác định";
+        }
     }
 %>
 <%
@@ -29,7 +30,7 @@
 <body>
 <nav class="navbar">
     <a class="navbar-brand" href="index.html"><div class="logo-icon">🍜</div>FoodOrder</a>
-    <div class="navbar-actions"><a class="btn btn-ghost" href="OrderServlet?action=my-page">← Quay lại đơn của tôi</a></div>
+    <div class="navbar-actions"><a class="btn btn-ghost" href="CartServlet?view=tracking">← Đơn của tôi</a></div>
 </nav>
 
 <section class="order-page">
@@ -43,9 +44,12 @@
                     <p>Thời gian đặt: <%= order.getCreatedAt() %></p>
                 </div>
                 <div>
-                    <span class="status-chip status-<%= order.getStatus().toLowerCase() %>"><%= statusLabel(order.getStatus()) %></span>
+                    <span class="status-chip status-<%= order.getStatus() %>"><%= statusLabel(order.getStatus()) %></span>
                     <p style="font-weight:700;color:var(--primary);margin-top:6px;"><%= String.format("%,.0fđ", order.getTotalPrice()) %></p>
                 </div>
+            </div>
+            <div class="order-actions" style="margin-top:14px;">
+                <a class="btn btn-primary" href="OrderTrackingServlet?orderId=<%= order.getId() %>">Theo dõi đơn này</a>
             </div>
         </div>
 
@@ -65,7 +69,7 @@
                         <%= String.format("%,.0fđ", item.getPrice() * item.getQuantity()) %>
                     </div>
                 </div>
-                <% if ("DA_GIAO_THANH_CONG".equals(order.getStatus())) { %>
+                <% if (order.getStatus() == 3) { %>
                     <form class="form-review" onsubmit="submitReview(event, <%= order.getId() %>, <%= item.getFoodId() %>)">
                         <label>Đánh giá món: <strong><%= item.getFoodName() %></strong></label>
                         <select name="rating" required>
@@ -92,5 +96,6 @@
     <% } %>
 </section>
 <script src="js/order.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

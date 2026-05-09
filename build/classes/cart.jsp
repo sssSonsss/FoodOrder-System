@@ -34,6 +34,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
     <title>Giỏ hàng của tôi - FoodOrder</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
@@ -57,22 +58,12 @@
         .timeline-step.done::before { background:#27AE60; }
         .timeline-step.current::before { background:#FF6B35; }
         .status-chip { padding: 4px 10px; border-radius: 99px; font-size: .8rem; font-weight: 700; }
+        .status-0 { background:#eef2f7; color:#4a5568; }
         .status-1 { background:#fff3da; color:#9f6b00; }
         .status-2 { background:#e8f1ff; color:#1a62b8; }
         .status-3 { background:#e5f7ec; color:#1c8f4d; }
         .status-4 { background:#fdeceb; color:#bc3528; }
         .status-demo { background:#f3f4f6; color:#5b6470; margin-left: 6px; }
-        .notify-wrap { position: relative; }
-        .notify-btn { position: relative; border: none; background: transparent; font-size: 1.2rem; padding: 8px; border-radius: 8px; }
-        .notify-btn:hover { background: var(--border); }
-        .notify-badge { position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--danger); color: #fff; font-size: .72rem; font-weight: 700; display: none; align-items: center; justify-content: center; }
-        .notify-dropdown { position: absolute; right: 0; top: 42px; width: 360px; max-width: 92vw; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-md); display: none; z-index: 2000; overflow: hidden; }
-        .notify-head { padding: 10px 12px; font-weight: 700; border-bottom: 1px solid var(--border); }
-        .notify-list { max-height: 320px; overflow: auto; }
-        .notify-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
-        .notify-item:hover { background: #fafbfc; }
-        .notify-item.unread { background: #fff6f2; }
-        .notify-time { color: var(--text-light); font-size: .78rem; margin-top: 4px; display: block; }
         .sale-section { margin-top: 22px; }
         .sale-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:14px; margin-top:12px; }
         .sale-card { background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-sm); overflow:hidden; cursor:pointer; transition:var(--transition); }
@@ -83,6 +74,17 @@
         .sale-price { color:var(--primary); font-weight:800; }
         .sale-old { color:var(--text-light); text-decoration:line-through; font-size:.86rem; margin-left:6px; }
         .sale-badge { display:inline-block; font-size:.75rem; background:#ffe8de; color:#cc4b17; font-weight:700; padding:3px 8px; border-radius:99px; margin-bottom:6px; }
+        .sale-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .sale-actions button, .sale-actions a {
+            flex:1; min-width:0; padding:8px 10px; border-radius:10px; font-size:.82rem; font-weight:700;
+            border:1px solid var(--border); background:#fff; cursor:pointer; font-family:var(--font-main); text-align:center;
+            text-decoration:none; color:var(--text-dark);
+        }
+        .sale-actions .btn-sale-detail:hover { border-color:var(--primary); color:var(--primary); }
+        .sale-actions .btn-sale-quick {
+            background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; border:none;
+        }
+        .sale-actions .btn-sale-quick:hover { filter:brightness(1.05); }
         @media (max-width: 860px) {
             .cart-table thead { display: none; }
             .cart-table tr { display: block; border-bottom: 1px solid var(--border); }
@@ -99,20 +101,9 @@
     <ul class="navbar-nav">
         <li><a href="index.html">Trang chủ</a></li>
         <li><a href="menu.html">Thực đơn</a></li>
-        <li><a href="CartServlet" class="active">Giỏ hàng</a></li>
     </ul>
     <div class="navbar-actions">
-        <div class="notify-wrap">
-            <button class="notify-btn" id="notify-btn" onclick="toggleNotifications()" title="Thông báo">
-                🔔
-                <span class="notify-badge" id="notify-badge">0</span>
-            </button>
-            <div class="notify-dropdown" id="notify-dropdown">
-                <div class="notify-head">Thông báo mới</div>
-                <div class="notify-list" id="notify-list"></div>
-            </div>
-        </div>
-        <a href="menu.html" class="btn btn-ghost">← Tiếp tục mua sắm</a>
+        <div class="navbar-icons" id="navbar-icons"></div>
     </div>
 </nav>
 
@@ -128,8 +119,16 @@
     <% if ("cart".equals(activeView)) { %>
     <% if (cartItems == null || cartItems.isEmpty()) { %>
         <div class="cart-card p-4">
-            <p class="mb-3"><%= emptyMessage == null ? "Giỏ hàng của bạn đang trống" : emptyMessage %></p>
-            <a class="btn btn-primary" href="menu.html">Quay lại mua sắm</a>
+            <p class="mb-2"><%= emptyMessage == null ? "Giỏ hàng của bạn đang trống" : emptyMessage %></p>
+            <p class="mb-3" style="color:var(--text-light);font-size:.92rem;line-height:1.55;">
+                Sau khi <strong>đặt hàng thành công</strong>, giỏ được làm trống (đúng quy trình).
+                Nếu bạn <strong>đã đăng nhập</strong> và vừa thêm món mà vẫn trống, hệ thống sẽ tự làm mới sau vài giây hoặc thử tải lại trang.
+                Phải <strong>đăng nhập</strong> trước khi &quot;Thêm vào giỏ&quot; ở thực đơn thì mới lưu được vào giỏ.
+            </p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <a class="btn btn-primary" href="menu.html">Thêm món từ thực đơn</a>
+                <a class="btn btn-outline" href="CartServlet?view=cart&amp;fillSample=1">Nạp giỏ mẫu (2 món demo)</a>
+            </div>
         </div>
     <% } else { %>
         <div class="cart-card">
@@ -147,7 +146,9 @@
                 </thead>
                 <tbody id="cart-tbody">
                 <% for (CartItem item : cartItems) { %>
-                    <tr id="row-<%= item.getId() %>" class="cart-item-row">
+                    <tr id="row-<%= item.getId() %>" class="cart-item-row"
+                        data-cart-item-id="<%= item.getId() %>"
+                        data-unit-price="<%= item.getPrice() %>">
                         <td><input type="checkbox" class="item-check" checked onchange="updateSelectedTotal()"></td>
                         <td><img class="cart-thumb" src="<%= item.getImage() == null ? "images/food-placeholder.svg" : item.getImage() %>" alt="Món ăn" onerror="this.src='images/food-placeholder.svg'"></td>
                         <td>
@@ -183,37 +184,61 @@
     <% } %>
     <% } %>
 
-    <% if ("cart".equals(activeView) && cartItems != null && !cartItems.isEmpty()) { %>
+    <%-- Gợi ý luôn hiện trên tab Giỏ (kể cả giỏ trống) để vào luồng đặt món --%>
+    <% if ("cart".equals(activeView)) { %>
     <div class="sale-section" id="sale-section">
         <div class="section-header" style="text-align:left;margin-bottom:6px;">
-            <div class="section-tag">🔥 Đang sale</div>
-            <h3 class="section-title" style="font-size:1.4rem;">Gợi ý thực đơn cho bạn</h3>
-            <p class="section-desc" style="margin:0;">Các món ăn đang khuyến mãi theo giờ vàng.</p>
+            <div class="section-tag">✨ Gợi ý đơn cho bạn</div>
+            <h3 class="section-title" style="font-size:1.4rem;">Chọn món để đặt</h3>
+            <p class="section-desc" style="margin:0;">Bấm vào thẻ để xem chi tiết; dùng <strong>Đặt nhanh</strong> để sang bước đặt hàng ngay (1 món).</p>
         </div>
         <div id="sale-grid" class="sale-grid"></div>
+        <p style="margin-top:14px;color:var(--text-light);font-size:.88rem;">
+            Hoặc mở <a href="menu.html">toàn bộ thực đơn</a> để chọn thêm.
+        </p>
     </div>
     <% } %>
 
     <% if ("tracking".equals(activeView)) { %>
     <div class="cart-card p-4">
         <% if (deliveringOrders == null || deliveringOrders.isEmpty()) { %>
-            <p class="mb-0">Hiện chưa có đơn đang giao.</p>
-        <% } else { for (Order order : deliveringOrders) { %>
+            <p class="mb-2">Hiện không có đơn đang xử lý (chờ xác nhận / chuẩn bị / giao).</p>
+            <p class="mb-0" style="color:var(--text-light);font-size:.9rem;">Đơn vừa đặt có trạng thái &quot;Chờ xác nhận&quot; sẽ hiển thị tại đây.</p>
+        <% } else { for (Order order : deliveringOrders) {
+            List<OrderItem> tItems = orderItemsMap != null ? orderItemsMap.get(order.getId()) : null;
+            int os = order.getStatus();
+            String[] tls = {"Chờ xác nhận", "Đang chuẩn bị", "Đang giao", "Hoàn thành"};
+        %>
             <div class="border rounded p-3 mb-3" id="track-order-<%= order.getId() %>" style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
                     <strong>Đơn #<%= order.getId() %></strong>
-                    <div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                         <span class="status-chip status-<%= order.getStatus() %>" id="status-text-<%= order.getId() %>"><%= statusLabel(order.getStatus()) %></span>
-                        <% if (order.getId() >= 8900) { %><span class="status-chip status-demo">Dữ liệu demo</span><% } %>
+                        <a class="btn btn-outline" style="padding:6px 12px;font-size:.82rem;" href="OrderTrackingServlet?orderId=<%= order.getId() %>">Theo dõi chi tiết</a>
                     </div>
                 </div>
+                <% if (tItems != null && !tItems.isEmpty()) { %>
+                <ul style="margin:0 0 12px 1rem;padding:0;color:var(--text-mid);font-size:.9rem;">
+                    <% for (OrderItem li : tItems) { %>
+                    <li><%= li.getFoodName() %> × <%= li.getQuantity() %> — <%= String.format("%,.0fđ", li.getPrice() * li.getQuantity()) %></li>
+                    <% } %>
+                </ul>
+                <% } %>
                 <div class="timeline">
-                    <div class="timeline-step <%= order.getStatus() > 0 ? "done" : "current" %>"><strong>Shipper đang lấy hàng</strong></div>
-                    <div class="timeline-step <%= order.getStatus() > 1 ? "done" : (order.getStatus() == 1 ? "current" : "") %>"><strong>Shipper đang đến với bạn</strong></div>
-                    <div class="timeline-step <%= order.getStatus() > 2 ? "done" : (order.getStatus() == 2 ? "current" : "") %>"><strong>Đã giao thành công</strong></div>
+                    <% for (int ti = 0; ti < tls.length; ti++) {
+                        String cls;
+                        if (os >= 3) cls = "done";
+                        else if (ti < os) cls = "done";
+                        else if (ti == os) cls = "current";
+                        else cls = "";
+                    %>
+                    <div class="timeline-step <%= cls %>"><strong><%= tls[ti] %></strong></div>
+                    <% } %>
                 </div>
-                <p class="mb-1">Shipper: Nguyễn Văn Nhanh - Biển số: 59X2-456.78</p>
-                <small style="color:var(--text-light);">Cập nhật: <%= order.getCreatedAt() %></small>
+                <% if (os >= 1 && os <= 2) { %>
+                <p class="mb-1 mt-2">Shipper (demo): Nguyễn Văn Nhanh — 59X2-456.78</p>
+                <% } %>
+                <small style="color:var(--text-light);">Đặt lúc: <%= order.getCreatedAt() %> — Tổng: <strong><%= String.format("%,.0fđ", order.getTotalPrice()) %></strong></small>
             </div>
         <% }} %>
     </div>
@@ -222,24 +247,40 @@
     <% if ("history".equals(activeView)) { %>
     <div class="cart-card p-4">
         <% if (historyOrders == null || historyOrders.isEmpty()) { %>
-            <p class="mb-0">Chưa có đơn trong lịch sử.</p>
-        <% } else { for (Order order : historyOrders) { %>
-            <div class="border rounded p-3 mb-3" style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
+            <p class="mb-2">Chưa có đơn trong lịch sử (hoàn thành / đã hủy).</p>
+            <p class="mb-0" style="color:var(--text-light);font-size:.9rem;">Đơn đã giao hoặc hủy sẽ hiển thị tại đây. Chạy script SQL demo trong <code>BTL_FoodMenu.sql</code> để có dữ liệu mẫu.</p>
+        <% } else { for (Order order : historyOrders) {
+            List<OrderItem> hItems = orderItemsMap != null ? orderItemsMap.get(order.getId()) : null;
+        %>
+            <div class="border rounded p-3 mb-3 history-order-card" style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-                    <strong>Đơn #<%= order.getId() %></strong>
                     <div>
+                        <strong>Đơn #<%= order.getId() %></strong>
+                        <div style="color:var(--text-light);font-size:.86rem;margin-top:4px;">Đặt lúc: <%= order.getCreatedAt() %></div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                         <span class="status-chip status-<%= order.getStatus() %>"><%= statusLabel(order.getStatus()) %></span>
-                        <% if (order.getId() >= 8900) { %><span class="status-chip status-demo">Dữ liệu demo</span><% } %>
                     </div>
                 </div>
-                <p style="margin-bottom:10px;">Tổng tiền: <strong><%= String.format("%,.0fđ", order.getTotalPrice()) %></strong></p>
+                <% if (hItems != null && !hItems.isEmpty()) { %>
+                <ul class="history-items" style="margin:0 0 12px 1.1rem;padding:0;color:var(--text-mid);font-size:.92rem;line-height:1.5;">
+                    <% for (OrderItem li : hItems) { %>
+                    <li><%= li.getFoodName() %> × <%= li.getQuantity() %> — <%= String.format("%,.0fđ", li.getPrice() * li.getQuantity()) %></li>
+                    <% } %>
+                </ul>
+                <% } %>
+                <p style="margin-bottom:12px;">Tổng đơn: <strong style="color:var(--primary);"><%= String.format("%,.0fđ", order.getTotalPrice()) %></strong></p>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="btn btn-outline" onclick="reorder(<%= order.getId() %>)">Mua lại</button>
-                    <% if (order.getStatus() == 3) { 
+                    <a class="btn btn-outline" href="OrderServlet?action=detail&amp;view=page&amp;orderId=<%= order.getId() %>">Chi tiết</a>
+                    <% if (order.getStatus() == 3) { %>
+                    <a class="btn btn-outline" href="OrderTrackingServlet?orderId=<%= order.getId() %>">Xem tiến trình (đã xong)</a>
+                    <% } %>
+                    <button type="button" class="btn btn-outline" onclick="reorder(<%= order.getId() %>)">Mua lại</button>
+                    <% if (order.getStatus() == 3) {
                         List<OrderItem> itemList = orderItemsMap.get(order.getId());
                         if (itemList != null && !itemList.isEmpty()) {
                     %>
-                    <button class="btn btn-primary" onclick="reviewItem(<%= order.getId() %>, <%= itemList.get(0).getFoodId() %>)">Đánh giá</button>
+                    <button type="button" class="btn btn-primary" onclick="reviewItem(<%= order.getId() %>, <%= itemList.get(0).getFoodId() %>)">Đánh giá</button>
                     <% }} %>
                 </div>
             </div>
@@ -295,6 +336,7 @@ function updateQuantity(cartItemId, quantity) {
 
     fetch("CartServlet", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
             action: "update",
@@ -311,9 +353,11 @@ function updateQuantity(cartItemId, quantity) {
 
         const row = document.getElementById("row-" + cartItemId);
         if (!row) return;
-        const unitPriceText = row.children[2].textContent;
+        const unit = Number(row.dataset.unitPrice);
+        const fallbackCell = row.cells && row.cells.length > 3 ? row.cells[3] : null;
+        const unitPrice = Number.isFinite(unit) && unit > 0 ? unit : parseMoney(fallbackCell ? fallbackCell.textContent : "0");
         const subtotalEl = document.getElementById("subtotal-" + cartItemId);
-        subtotalEl.textContent = formatMoney(parseMoney(unitPriceText) * qty);
+        subtotalEl.textContent = formatMoney(unitPrice * qty);
         updateGrandTotal();
         showToast("Đã cập nhật số lượng", "success");
     })
@@ -325,6 +369,7 @@ function removeItem(cartItemId) {
 
     fetch("CartServlet", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
             action: "delete",
@@ -351,6 +396,7 @@ function removeItem(cartItemId) {
 function reorder(orderId) {
     fetch("CartServlet", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ action: "reorder", orderId: String(orderId) }).toString()
     }).then(r => r.json()).then(data => {
@@ -365,6 +411,7 @@ function reviewItem(orderId, foodId) {
     const comment = prompt("Nhập nhận xét của bạn:", "Món ăn ngon, giao nhanh.");
     fetch("CartServlet", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
             action: "review",
@@ -380,15 +427,18 @@ function reviewItem(orderId, foodId) {
 }
 
 function statusLabelVi(status) {
-    if (status === 1) return "Đang chuẩn bị";
-    if (status === 2) return "Đang giao";
-    if (status === 3) return "Hoàn thành";
-    return "Chờ xác nhận";
+    const n = Number(status);
+    if (n === 0) return "Chờ xác nhận";
+    if (n === 1) return "Đang chuẩn bị";
+    if (n === 2) return "Đang giao";
+    if (n === 3) return "Hoàn thành";
+    if (n === 4) return "Đã hủy";
+    return "Đang xử lý";
 }
 
 if ("<%= activeView %>" === "tracking") {
     setInterval(() => {
-        fetch("CartServlet?view=tracking-data")
+        fetch("CartServlet?view=tracking-data", { credentials: "same-origin" })
             .then(r => r.json())
             .then(list => {
                 (list || []).forEach(order => {
@@ -398,67 +448,6 @@ if ("<%= activeView %>" === "tracking") {
             })
             .catch(() => {});
     }, 30000);
-}
-
-let notificationsOpen = false;
-function toggleNotifications() {
-    notificationsOpen = !notificationsOpen;
-    const dropdown = document.getElementById("notify-dropdown");
-    dropdown.style.display = notificationsOpen ? "block" : "none";
-    if (notificationsOpen) loadNotifications();
-}
-
-function loadNotifications() {
-    fetch("NotificationServlet")
-        .then(r => r.json())
-        .then(data => {
-            renderNotifications(data.items || []);
-            updateBadge(data.unread || 0);
-        })
-        .catch(() => {});
-}
-
-function updateBadge(unread) {
-    const badge = document.getElementById("notify-badge");
-    if (!badge) return;
-    if (unread > 0) {
-        badge.style.display = "inline-flex";
-        badge.textContent = unread > 99 ? "99+" : String(unread);
-    } else {
-        badge.style.display = "none";
-    }
-}
-
-function renderNotifications(list) {
-    const wrap = document.getElementById("notify-list");
-    if (!wrap) return;
-    if (!list.length) {
-        wrap.innerHTML = '<div class="notify-item">Hiện chưa có thông báo mới.</div>';
-        return;
-    }
-    wrap.innerHTML = "";
-    list.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "notify-item" + (item.is_read ? "" : " unread");
-        div.onclick = () => markRead(item.id);
-        div.innerHTML =
-            "<strong>" + escapeHtml(item.title || "") + "</strong>" +
-            "<div>" + escapeHtml(item.message || "") + "</div>" +
-            "<span class='notify-time'>" + escapeHtml(item.created_at || "") + "</span>";
-        wrap.appendChild(div);
-    });
-}
-
-function markRead(notificationId) {
-    if (!notificationId || notificationId <= 0) return;
-    fetch("NotificationServlet", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-            action: "mark-read",
-            notificationId: String(notificationId)
-        }).toString()
-    }).then(() => loadNotifications()).catch(() => {});
 }
 
 function showToast(msg, type) {
@@ -478,32 +467,15 @@ function escapeHtml(s) {
         .replace(/"/g, "&quot;");
 }
 
-setInterval(loadNotifications, 60000);
-loadNotifications();
-
-const CART_BATCH = 6;
-let cartVisible = CART_BATCH;
-
-function initInfiniteCart() {
-    const rows = Array.from(document.querySelectorAll(".cart-item-row"));
-    if (!rows.length) return;
-
-    function renderVisibleRows() {
-        rows.forEach((row, idx) => {
-            row.style.display = idx < cartVisible ? "" : "none";
-        });
-        updateGrandTotal();
-    }
-
-    renderVisibleRows();
-    window.addEventListener("scroll", function () {
-        const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 180;
-        if (!nearBottom) return;
-        if (cartVisible < rows.length) {
-            cartVisible += CART_BATCH;
-            renderVisibleRows();
-        }
+/** Luôn hiện đủ dòng giỏ — tránh ẩn nhầm sau khi chuyển tab / BFCache */
+function initCartTableUi() {
+    const tbody = document.getElementById("cart-tbody");
+    if (!tbody) return;
+    tbody.querySelectorAll(".cart-item-row").forEach(function (row) {
+        row.style.display = "";
+        row.style.visibility = "";
     });
+    updateGrandTotal();
 }
 
 function loadSaleSuggestions() {
@@ -520,30 +492,71 @@ function loadSaleSuggestions() {
                 const newPrice = Math.max(0, oldPrice * (100 - salePercent) / 100);
                 const card = document.createElement("div");
                 card.className = "sale-card";
-                card.onclick = () => { window.location.href = `food-detail.html?id=${food.id}`; };
-                card.innerHTML = `
-                    <img class="sale-img" src="${food.image_url || 'images/food-placeholder.svg'}"
-                         alt="${escapeHtml(food.name || '')}" onerror="this.src='images/food-placeholder.svg'">
-                    <div class="sale-body">
-                        <span class="sale-badge">Giảm ${salePercent}%</span>
-                        <div class="sale-name">${escapeHtml(food.name || '')}</div>
-                        <div>
-                            <span class="sale-price">${formatMoney(newPrice)}</span>
-                            <span class="sale-old">${formatMoney(oldPrice)}</span>
-                        </div>
-                    </div>
-                `;
+                const imageUrl = escapeHtml(food.image_url || "images/food-placeholder.svg");
+                const foodName = escapeHtml(food.name || "");
+                const fid = Number(food.id || 0);
+                card.innerHTML =
+                    '<img class="sale-img" src="' + imageUrl + '" alt="' + foodName + '" style="cursor:pointer;">' +
+                    '<div class="sale-body">' +
+                        '<span class="sale-badge">Giảm ' + salePercent + '%</span>' +
+                        '<div class="sale-name" style="cursor:pointer;">' + foodName + '</div>' +
+                        '<div>' +
+                            '<span class="sale-price">' + formatMoney(newPrice) + '</span>' +
+                            '<span class="sale-old">' + formatMoney(oldPrice) + '</span>' +
+                        '</div>' +
+                        '<div class="sale-actions">' +
+                            '<button type="button" class="btn-sale-detail">Chi tiết</button>' +
+                            '<button type="button" class="btn-sale-quick">Đặt nhanh</button>' +
+                        '</div>' +
+                    '</div>';
+                const goDetail = () => { window.location.href = "food-detail.html?id=" + fid; };
+                const goQuick = (e) => {
+                    if (e) e.stopPropagation();
+                    window.location.href = "order-select.html?foodId=" + fid + "&quantity=1";
+                };
+                card.querySelector(".sale-img").addEventListener("click", goDetail);
+                card.querySelector(".sale-name").addEventListener("click", goDetail);
+                card.querySelector(".btn-sale-detail").addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    goDetail();
+                });
+                card.querySelector(".btn-sale-quick").addEventListener("click", goQuick);
+                const img = card.querySelector(".sale-img");
+                if (img) img.onerror = () => { img.src = "images/food-placeholder.svg"; };
                 grid.appendChild(card);
             });
         })
         .catch(() => {
-            grid.innerHTML = "<p>Không tải được danh sách món sale lúc này.</p>";
+            grid.innerHTML = "<p>Không tải được gợi ý món. Thử <a href=\"menu.html\">mở thực đơn</a>.</p>";
         });
 }
 
-initInfiniteCart();
+<% if ("cart".equals(activeView)) { %>
+/** Trang giỏ render trống nhưng API vẫn có dòng (cache/BFCache): reload một lần */
+(function syncCartFromApi() {
+    const hasRows = document.querySelectorAll(".cart-item-row").length > 0;
+    if (hasRows) return;
+    fetch("CartServlet?view=cart-data", { credentials: "same-origin" })
+        .then(r => r.json())
+        .then(data => {
+            const n = (data && data.items && data.items.length) ? data.items.length : 0;
+            if (n > 0) window.location.reload();
+        })
+        .catch(function () {});
+})();
+<% } %>
+
+document.addEventListener("DOMContentLoaded", function () {
+    initCartTableUi();
+});
+window.addEventListener("pageshow", function (ev) {
+    if (ev.persisted) initCartTableUi();
+});
+initCartTableUi();
 loadSaleSuggestions();
 </script>
 <div class="toast" id="toast"></div>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>

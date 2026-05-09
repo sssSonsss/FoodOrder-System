@@ -27,8 +27,12 @@
         <div class="logo-icon">🍜</div>
         FoodOrder
     </a>
+    <ul class="navbar-nav">
+        <li><a href="index.html">Trang chủ</a></li>
+        <li><a href="menu.html">Thực đơn</a></li>
+    </ul>
     <div class="navbar-actions">
-        <a class="btn btn-ghost" href="menu.html">← Quay lại thực đơn</a>
+        <div class="navbar-icons" id="navbar-icons"></div>
     </div>
 </nav>
 
@@ -52,9 +56,10 @@
 
             <div class="panel">
                 <h3 style="margin-bottom:10px;">Thông tin nhận hàng</h3>
-                <label for="addressId" style="display:block;font-weight:600;margin-bottom:6px;">Mã địa chỉ (address_id):</label>
-                <input id="addressId" name="addressId" type="number" min="1" required placeholder="Ví dụ: 1"
-                       style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">
+                <input type="hidden" id="addressId" value="">
+                <label for="addressSelect" style="display:block;font-weight:600;margin-bottom:6px;">Địa chỉ đã lưu</label>
+                <select id="addressSelect" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:#fff;"></select>
+                <p id="addressPreview" style="margin:0 0 14px;font-size:.88rem;color:var(--text-mid);line-height:1.45;"></p>
 
                 <h3 style="margin-bottom:8px;">Phương thức thanh toán</h3>
                 <label class="pay-option">
@@ -104,9 +109,75 @@
         const query = new URLSearchParams(window.location.search);
         const foodId = Number(query.get("foodId") || 0);
         const quantity = Math.max(1, Number(query.get("quantity") || 1));
+        const preVoucher = (query.get("voucher") || query.get("voucherCode") || "").trim();
         let subtotal = 0;
         let discount = 0;
         let shippingFee = 15000;
+        let didPrefillVoucher = false;
+
+        function redirectPathForLogin() {
+            let pathname = window.location.pathname || "/";
+            const segs = pathname.split("/").filter(Boolean);
+            if (segs.length >= 2) pathname = "/" + segs.slice(1).join("/");
+            return pathname + (window.location.search || "");
+        }
+
+        fetch("AuthServlet?action=status", { headers: { Accept: "application/json" } })
+            .then(r => r.json())
+            .then(s => {
+                if (!s.loggedIn) {
+                    window.location.href = "login.html?redirect=" + encodeURIComponent(redirectPathForLogin());
+                    return;
+                }
+                loadAddresses().then(() => {
+                    if (foodId > 0) loadBuyNow(); else loadFromCart();
+                });
+            })
+            .catch(() => {
+                window.location.href = "login.html?redirect=" + encodeURIComponent(redirectPathForLogin());
+            });
+
+        function loadAddresses() {
+            return fetch("AuthServlet?action=addresses", { headers: { Accept: "application/json" } })
+                .then(r => {
+                    if (r.status === 401) throw new Error("login");
+                    return r.json();
+                })
+                .then(data => {
+                    const sel = document.getElementById("addressSelect");
+                    const items = data.items || [];
+                    sel.innerHTML = "";
+                    if (!items.length) {
+                        const o = document.createElement("option");
+                        o.value = "";
+                        o.textContent = "— Chưa có địa chỉ —";
+                        sel.appendChild(o);
+                        document.getElementById("addressPreview").innerHTML =
+                            'Bạn chưa có địa chỉ giao hàng. Vui lòng <a href="register.html">đăng ký</a> tài khoản mới hoặc thêm địa chỉ (liên hệ quản trị).';
+                        document.getElementById("addressId").value = "";
+                        return;
+                    }
+                    items.forEach(a => {
+                        const opt = document.createElement("option");
+                        opt.value = String(a.id);
+                        opt.textContent = (a.label || "Địa chỉ") + " — " + (a.summary || a.addressLine || "");
+                        if (a.isDefault) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    sel.onchange = syncAddressUi;
+                    syncAddressUi();
+                })
+                .catch(() => {
+                    document.getElementById("addressPreview").textContent = "Không tải được địa chỉ.";
+                });
+        }
+
+        function syncAddressUi() {
+            const sel = document.getElementById("addressSelect");
+            const opt = sel.options[sel.selectedIndex];
+            document.getElementById("addressId").value = sel.value || "";
+            document.getElementById("addressPreview").textContent = opt && opt.value ? opt.textContent : "";
+        }
 
         function formatMoney(v) {
             return Number(v || 0).toLocaleString("vi-VN") + "đ";
@@ -133,20 +204,39 @@
                 updateSummary();
                 return;
             }
-            if (code === "NEWUSER") {
-                discount = Math.round(subtotal * 0.2);
-                msg.textContent = "Áp dụng NEWUSER thành công: giảm 20%.";
-                msg.style.color = "var(--success)";
-            } else if (code === "FREESHIP") {
-                discount = shippingFee;
-                msg.textContent = "Áp dụng FREESHIP thành công: miễn phí vận chuyển.";
-                msg.style.color = "var(--success)";
-            } else {
-                discount = 0;
-                msg.textContent = "Mã không hợp lệ hoặc đã hết hạn.";
-                msg.style.color = "var(--danger)";
-            }
-            updateSummary();
+            fetch("VoucherServlet", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                body: new URLSearchParams({
+                    action: "preview",
+                    code: code,
+                    subtotal: String(subtotal),
+                    shippingFee: String(shippingFee)
+                }).toString()
+            })
+                .then(r => r.json().then(data => ({ okHttp: r.ok, status: r.status, data })))
+                .then(({ okHttp, status, data }) => {
+                    if (status === 401 || (data && data.needLogin)) {
+                        window.location.href = "login.html?redirect=" + encodeURIComponent(redirectPathForLogin());
+                        return;
+                    }
+                    if (data.ok) {
+                        discount = Number(data.discount || 0);
+                        msg.textContent = data.message || "Áp dụng voucher thành công.";
+                        msg.style.color = "var(--success)";
+                    } else {
+                        discount = 0;
+                        msg.textContent = data.message || "Không áp dụng được mã.";
+                        msg.style.color = "var(--danger)";
+                    }
+                    updateSummary();
+                })
+                .catch(() => {
+                    discount = 0;
+                    msg.textContent = "Không kiểm tra được mã (lỗi kết nối).";
+                    msg.style.color = "var(--danger)";
+                    updateSummary();
+                });
         }
 
         function updateSummary() {
@@ -183,10 +273,15 @@
             });
             subtotal = total;
             updateSummary();
+            if (!didPrefillVoucher && preVoucher) {
+                didPrefillVoucher = true;
+                document.getElementById("voucherInput").value = preVoucher;
+                applyVoucher();
+            }
         }
 
         function loadFromCart() {
-            fetch("CartServlet?view=cart-data")
+            fetch("CartServlet?view=cart-data", { credentials: "same-origin" })
                 .then(r => r.json())
                 .then(data => renderItems(data.items || []))
                 .catch(() => renderItems([]));
@@ -219,6 +314,7 @@
                 foodId: String(foodId),
                 quantity: String(quantity),
                 addressId: String(addressId),
+                addressSummary: document.getElementById("addressPreview").textContent || "",
                 paymentMethod: document.getElementById("paymentMethod").value || "COD",
                 shippingMethod: document.getElementById("shippingMethod").value || "STANDARD",
                 voucherCode: document.getElementById("voucherCode").value || "",
@@ -230,9 +326,9 @@
 
             window.location.href = "order-confirm.html?" + confirmParams.toString();
         });
-
-        if (foodId > 0) loadBuyNow(); else loadFromCart();
     </script>
 </section>
+<script src="js/auth-navbar.js"></script>
+<script src="js/notification-widget.js"></script>
 </body>
 </html>
