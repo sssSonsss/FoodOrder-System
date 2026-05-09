@@ -127,7 +127,6 @@
             </p>
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                 <a class="btn btn-primary" href="menu.html">Thêm món từ thực đơn</a>
-                <a class="btn btn-outline" href="CartServlet?view=cart&amp;fillSample=1">Nạp giỏ mẫu (2 món demo)</a>
             </div>
         </div>
     <% } else { %>
@@ -177,7 +176,7 @@
                 <div class="cart-total">Tổng cộng: <span id="grand-total"><%= String.format("%,.0fđ", grandTotal) %></span></div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <a class="btn btn-outline" href="menu.html">Thêm món</a>
-                    <a class="btn btn-primary" href="checkout.html">Tiến hành đặt hàng</a>
+                    <button type="button" class="btn btn-primary" onclick="goCheckoutFromCart()">Tiến hành đặt hàng</button>
                 </div>
             </div>
         </div>
@@ -314,6 +313,23 @@ function updateGrandTotal() {
 
 function updateSelectedTotal() {
     updateGrandTotal();
+}
+
+/** Chỉ đặt các dòng giỏ đang được tích chọn */
+function goCheckoutFromCart() {
+    const ids = [];
+    document.querySelectorAll("#cart-tbody tr.cart-item-row").forEach(function (row) {
+        const check = row.querySelector(".item-check");
+        if (check && check.checked) {
+            const id = row.getAttribute("data-cart-item-id");
+            if (id) ids.push(id);
+        }
+    });
+    if (!ids.length) {
+        alert("Vui lòng chọn ít nhất một món trong giỏ để đặt hàng.");
+        return;
+    }
+    window.location.href = "checkout.html?cartItemIds=" + encodeURIComponent(ids.join(","));
 }
 
 function changeQty(cartItemId, delta) {

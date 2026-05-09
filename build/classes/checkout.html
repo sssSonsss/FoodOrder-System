@@ -109,11 +109,14 @@
         const query = new URLSearchParams(window.location.search);
         const foodId = Number(query.get("foodId") || 0);
         const quantity = Math.max(1, Number(query.get("quantity") || 1));
+        const cartItemIdsParam = (query.get("cartItemIds") || "").trim();
         const preVoucher = (query.get("voucher") || query.get("voucherCode") || "").trim();
         let subtotal = 0;
         let discount = 0;
         let shippingFee = 15000;
         let didPrefillVoucher = false;
+        /** id dòng cart_items sau lần load gần nhất — dùng khi không có cartItemIds trên URL */
+        let loadedCartRowIds = [];
 
         function redirectPathForLogin() {
             let pathname = window.location.pathname || "/";
@@ -249,6 +252,7 @@
 
         function renderItems(items) {
             const wrap = document.getElementById("checkout-items");
+            loadedCartRowIds = (items || []).map(it => Number(it.id)).filter(id => id > 0);
             if (!items || !items.length) {
                 wrap.innerHTML = "<p>Chưa có sản phẩm để thanh toán. Vui lòng thêm món vào giỏ hàng.</p>";
                 document.querySelector("button[type='submit']").disabled = true;
@@ -283,7 +287,14 @@
         function loadFromCart() {
             fetch("CartServlet?view=cart-data", { credentials: "same-origin" })
                 .then(r => r.json())
-                .then(data => renderItems(data.items || []))
+                .then(data => {
+                    let items = data.items || [];
+                    if (cartItemIdsParam) {
+                        const allow = new Set(cartItemIdsParam.split(",").map(s => parseInt(String(s).trim(), 10)).filter(n => n > 0));
+                        items = items.filter(it => allow.has(Number(it.id)));
+                    }
+                    renderItems(items);
+                })
                 .catch(() => renderItems([]));
         }
 
@@ -323,6 +334,10 @@
                 subtotal: String(subtotal),
                 total: String(Math.max(0, subtotal + shippingFee - discount))
             });
+            if (foodId <= 0) {
+                const idsToSend = cartItemIdsParam || loadedCartRowIds.join(",");
+                if (idsToSend) confirmParams.set("cartItemIds", idsToSend);
+            }
 
             window.location.href = "order-confirm.html?" + confirmParams.toString();
         });

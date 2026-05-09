@@ -10,16 +10,44 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class OrderDAO {
     private final NotificationDAO notificationDAO = new NotificationDAO();
 
-    public int createOrderFromCart(int userId, int addressId) throws Exception {
-        String sqlCart = "SELECT c.food_id, c.quantity, f.price "
+    /**
+     * Tạo đơn từ giỏ. Nếu {@code onlyCartRowIds} khác null và không rỗng, chỉ các dòng giỏ có id thuộc danh sách
+     * được đưa vào đơn và bị xóa khỏi giỏ; các dòng khác giữ nguyên.
+     * Nếu {@code onlyCartRowIds} null hoặc rỗng, toàn bộ giỏ được đặt và xóa (luồng cũ / đặt nhanh).
+     */
+    public int createOrderFromCart(int userId, int addressId, List<Integer> onlyCartRowIds) throws Exception {
+        Set<Integer> idFilter = null;
+        if (onlyCartRowIds != null && !onlyCartRowIds.isEmpty()) {
+            idFilter = new LinkedHashSet<>();
+            for (Integer id : onlyCartRowIds) {
+                if (id != null && id > 0) {
+                    idFilter.add(id);
+                }
+            }
+            if (idFilter.isEmpty()) {
+                idFilter = null;
+            }
+        }
+
+        String sqlCart = "SELECT c.id, c.food_id, c.quantity, f.price "
                        + "FROM cart_items c "
                        + "JOIN foods f ON c.food_id = f.id "
                        + "WHERE c.user_id = ?";
+        if (idFilter != null) {
+            StringBuilder in = new StringBuilder();
+            for (int i = 0; i < idFilter.size(); i++) {
+                if (i > 0) in.append(",");
+                in.append("?");
+            }
+            sqlCart += " AND c.id IN (" + in + ")";
+        }
 
         String sqlInsertOrder = "INSERT INTO orders (user_id, total_price, status, address_id) "
                               + "VALUES (?, ?, ?, ?) RETURNING id";
@@ -27,7 +55,17 @@ public class OrderDAO {
         String sqlInsertItem = "INSERT INTO order_items (order_id, food_id, quantity, price) "
                              + "VALUES (?, ?, ?, ?)";
 
-        String sqlDeleteCart = "DELETE FROM cart_items WHERE user_id = ?";
+        String sqlDeleteCart;
+        if (idFilter == null) {
+            sqlDeleteCart = "DELETE FROM cart_items WHERE user_id = ?";
+        } else {
+            StringBuilder delIn = new StringBuilder();
+            for (int i = 0; i < idFilter.size(); i++) {
+                if (i > 0) delIn.append(",");
+                delIn.append("?");
+            }
+            sqlDeleteCart = "DELETE FROM cart_items WHERE user_id = ? AND id IN (" + delIn + ")";
+        }
 
         try (Connection conn = DBConnection.getConnection()) {
             conn.setAutoCommit(false);
@@ -36,7 +74,13 @@ public class OrderDAO {
                 double total = 0;
 
                 try (PreparedStatement psCart = conn.prepareStatement(sqlCart)) {
-                    psCart.setInt(1, userId);
+                    int pi = 1;
+                    psCart.setInt(pi++, userId);
+                    if (idFilter != null) {
+                        for (int cid : idFilter) {
+                            psCart.setInt(pi++, cid);
+                        }
+                    }
                     try (ResultSet rs = psCart.executeQuery()) {
                         while (rs.next()) {
                             int quantity = rs.getInt("quantity");
@@ -80,7 +124,13 @@ public class OrderDAO {
                 insertStatusLog(conn, orderId, 0, "Đơn hàng vừa được tạo");
 
                 try (PreparedStatement psDelete = conn.prepareStatement(sqlDeleteCart)) {
-                    psDelete.setInt(1, userId);
+                    int di = 1;
+                    psDelete.setInt(di++, userId);
+                    if (idFilter != null) {
+                        for (int cid : idFilter) {
+                            psDelete.setInt(di++, cid);
+                        }
+                    }
                     psDelete.executeUpdate();
                 }
 

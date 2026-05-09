@@ -127,9 +127,9 @@ public class CartServlet extends HttpServlet {
         }
     }
 
-    /** Trang tab Giỏ: demo luôn nạp khi trống; mọi user có thể ?fillSample=1 */
+    /** Trang tab Giỏ: phiên demo tự nạp mẫu khi giỏ trống (không còn tham số URL). */
     private void maybeRefillSampleCartForPage(HttpServletRequest request, int userId) {
-        if (isDemoSessionUser(request) || "1".equals(request.getParameter("fillSample"))) {
+        if (isDemoSessionUser(request)) {
             cartDAO.refillSampleCartIfEmpty(userId);
         }
     }

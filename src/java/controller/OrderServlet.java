@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet("/OrderServlet")
@@ -106,7 +107,8 @@ public class OrderServlet extends HttpServlet {
         }
 
         try {
-            int orderId = orderDAO.createOrderFromCart(userId, addressId);
+            List<Integer> cartRowIds = parseCartItemIds(request.getParameter("cartItemIds"));
+            int orderId = orderDAO.createOrderFromCart(userId, addressId, cartRowIds);
             if (orderId <= 0) {
                 request.setAttribute("errorMessage", "Giỏ hàng đang trống, không thể tạo đơn.");
             } else {
@@ -224,6 +226,21 @@ public class OrderServlet extends HttpServlet {
         } catch (Exception ignored) {
             return defaultValue;
         }
+    }
+
+    /** null = đặt toàn bộ giỏ (đặt nhanh / tương thích cũ); không rỗng = chỉ các dòng cart_items.id đã chọn */
+    private List<Integer> parseCartItemIds(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        List<Integer> out = new ArrayList<>();
+        for (String p : raw.split(",")) {
+            int id = parseInt(p.trim(), 0);
+            if (id > 0) {
+                out.add(id);
+            }
+        }
+        return out.isEmpty() ? null : out;
     }
 
     private double parseDouble(String value, double defaultValue) {

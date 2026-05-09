@@ -43,6 +43,7 @@
         <input type="hidden" name="shippingMethod" id="f-shippingMethod" value="">
         <input type="hidden" name="voucherCode" id="f-voucherCode" value="">
         <input type="hidden" name="discountApplied" id="f-discountApplied" value="0">
+        <input type="hidden" name="cartItemIds" id="f-cartItemIds" value="">
 
         <div class="confirm-grid">
             <div class="panel">
@@ -76,6 +77,7 @@
     const q = new URLSearchParams(window.location.search);
     const foodId = Number(q.get("foodId") || 0);
     const quantity = Math.max(1, Number(q.get("quantity") || 1));
+    const cartItemIds = (q.get("cartItemIds") || "").trim();
     const addressId = q.get("addressId") || "";
     const addressSummary = q.get("addressSummary") || "";
     const paymentMethod = q.get("paymentMethod") || "COD";
@@ -120,6 +122,7 @@
         document.getElementById("f-shippingMethod").value = shippingMethod;
         document.getElementById("f-voucherCode").value = voucherCode;
         document.getElementById("f-discountApplied").value = String(discount);
+        document.getElementById("f-cartItemIds").value = cartItemIds;
 
         let addrText = addressSummary || "";
         if (!addrText && addressId) addrText = "Mã địa chỉ #" + addressId;
@@ -134,10 +137,13 @@
         document.getElementById("sum-shipping").textContent = formatMoney(shippingFee);
         document.getElementById("sum-total").textContent = formatMoney(total);
 
-        const backParams = new URLSearchParams({
-            foodId: String(foodId),
-            quantity: String(quantity)
-        });
+        const backParams = new URLSearchParams();
+        if (foodId > 0) {
+            backParams.set("foodId", String(foodId));
+            backParams.set("quantity", String(quantity));
+        } else if (cartItemIds) {
+            backParams.set("cartItemIds", cartItemIds);
+        }
         document.getElementById("back-order-btn").href = "checkout.html?" + backParams.toString();
     }
 
@@ -153,6 +159,30 @@
                 <strong style="color:var(--primary);">${formatMoney(Number(food.price || 0) * quantity)}</strong>
             </div>
         `;
+    }
+
+    function renderCartItemsFromApi(items) {
+        const wrap = document.getElementById("confirm-items");
+        if (!items || !items.length) {
+            wrap.innerHTML = "<p>Không có món nào khớp lựa chọn. Vui lòng quay lại giỏ hàng.</p>";
+            return;
+        }
+        wrap.innerHTML = "";
+        items.forEach(it => {
+            const qn = Number(it.quantity || 1);
+            const price = Number(it.price || 0);
+            const row = document.createElement("div");
+            row.className = "item-row";
+            row.innerHTML = `
+                <img class="thumb" src="${it.image || "images/food-placeholder.svg"}" onerror="this.src='images/food-placeholder.svg'" alt="Món ăn">
+                <div>
+                    <strong>${it.food_name || ""}</strong>
+                    <div style="color:var(--text-light);">Số lượng: ${qn}</div>
+                </div>
+                <strong style="color:var(--primary);">${formatMoney(price * qn)}</strong>
+            `;
+            wrap.appendChild(row);
+        });
     }
 
     document.getElementById("confirm-form").addEventListener("submit", function (e) {
@@ -179,8 +209,19 @@
             .catch(() => {
                 document.getElementById("confirm-items").innerHTML = "<p>Không tải được thông tin món đã chọn.</p>";
             });
+    } else if (cartItemIds) {
+        const allow = new Set(cartItemIds.split(",").map(s => parseInt(String(s).trim(), 10)).filter(n => n > 0));
+        fetch("CartServlet?view=cart-data", { credentials: "same-origin" })
+            .then(r => r.json())
+            .then(data => {
+                const items = (data.items || []).filter(it => allow.has(Number(it.id)));
+                renderCartItemsFromApi(items);
+            })
+            .catch(() => {
+                document.getElementById("confirm-items").innerHTML = "<p>Không tải được giỏ hàng.</p>";
+            });
     } else {
-        document.getElementById("confirm-items").innerHTML = "<p>Nội dung đơn lấy từ <strong>giỏ hàng</strong> của bạn sau khi bấm Đặt đơn.</p>";
+        document.getElementById("confirm-items").innerHTML = "<p>Thiếu thông tin đơn hàng. Vui lòng quay lại <a href=\"CartServlet?view=cart\">giỏ hàng</a>.</p>";
     }
 </script>
 <script src="js/auth-navbar.js"></script>
